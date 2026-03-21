@@ -23,6 +23,13 @@ class RoomConnection:
         if self._ack_event:
             self._ack_event.set()
 
+    def handle_barge_in(self):
+        """Called when the user starts speaking while an avatar is talking.
+        Unblocks any pending speak wait so the conversation can continue."""
+        if self._ack_event:
+            self._ack_event.set()
+        print(f"[Barge-in] User interrupted avatar in room {self.topic_id}")
+
 
 class RoomManager:
     """Manages virtual room connections keyed by topic_id."""

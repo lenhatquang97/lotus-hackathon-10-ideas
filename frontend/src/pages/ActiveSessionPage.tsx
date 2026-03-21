@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessionStore } from '../stores/sessionStore';
 import { useSessionSocket } from '../hooks/useSessionSocket';
+import { useVAD } from '../hooks/useVAD';
 import { sessionsApi, topicsApi } from '../services/api';
 import { Scene3D } from '../components/scene/Scene3D';
 import type { TranscriptTurn } from '../types';
@@ -98,7 +99,12 @@ export default function ActiveSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const store = useSessionStore();
-  const { startSession, endSession, toggleMic } = useSessionSocket(sessionId!);
+  const { startSession, endSession, toggleMic, onUserSpeechStart, onUserSpeechEnd } = useSessionSocket(sessionId!);
+  const vad = useVAD({
+    onSpeechStart: onUserSpeechStart,
+    onSpeechEnd: onUserSpeechEnd,
+    enabled: store.isMicActive,
+  });
   const [activeCharIdx, setActiveCharIdx] = useState(0);
   const [sessionStartTime] = useState(Date.now());
   const [ending, setEnding] = useState(false);
@@ -213,14 +219,22 @@ export default function ActiveSessionPage() {
             <button onClick={toggleMic}
               className="w-14 h-14 rounded-full flex items-center justify-center text-xl transition-all"
               style={{
-                backgroundColor: store.isMicActive ? 'white' : 'rgba(255,255,255,0.1)',
-                color: store.isMicActive ? 'black' : 'white',
-                boxShadow: store.isMicActive ? '0 0 0 4px rgba(255,255,255,0.2)' : 'none',
+                backgroundColor: store.isMicActive
+                  ? vad.userSpeaking ? '#ef4444' : 'white'
+                  : 'rgba(255,255,255,0.1)',
+                color: store.isMicActive ? (vad.userSpeaking ? 'white' : 'black') : 'white',
+                boxShadow: store.isMicActive
+                  ? vad.userSpeaking
+                    ? '0 0 0 4px rgba(239,68,68,0.4)'
+                    : '0 0 0 4px rgba(255,255,255,0.2)'
+                  : 'none',
               }}>
               {store.isMicActive ? '🎙️' : '🎤'}
             </button>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', textTransform: 'uppercase', color: store.isMicActive ? 'white' : 'rgba(255,255,255,0.3)' }}>
-              {store.isMicActive ? 'Recording' : 'Tap to speak'}
+              {store.isMicActive
+                ? vad.userSpeaking ? 'Speaking...' : 'Listening'
+                : 'Tap to speak'}
             </span>
           </div>
         </div>

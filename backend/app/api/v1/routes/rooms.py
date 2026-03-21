@@ -3,8 +3,33 @@ import httpx
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import JSONResponse
 from app.rooms import room_manager
+from app.core.config import settings
 
 router = APIRouter()
+
+
+@router.post("/scribe-token")
+async def get_scribe_token():
+    """Generate a single-use token for ElevenLabs Scribe realtime STT.
+    This keeps the API key server-side only."""
+    if not settings.ELEVENLABS_API_KEY:
+        return JSONResponse(
+            {"error": "ELEVENLABS_API_KEY not configured"}, status_code=500
+        )
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "https://api.elevenlabs.io/v1/single-use-token/realtime_scribe",
+            headers={"xi-api-key": settings.ELEVENLABS_API_KEY},
+        )
+
+    if response.status_code != 200:
+        return JSONResponse(
+            {"error": "Failed to get scribe token"}, status_code=response.status_code
+        )
+
+    data = response.json()
+    return {"token": data.get("token", "")}
 
 
 @router.websocket("/ws/room/{topic_id}")
@@ -27,6 +52,10 @@ async def websocket_room(ws: WebSocket, topic_id: str):
                 room = room_manager.get_room(topic_id)
                 if room:
                     room.handle_ack()
+            elif msg_type == "barge_in":
+                room = room_manager.get_room(topic_id)
+                if room:
+                    room.handle_barge_in()
 
     except WebSocketDisconnect:
         room_manager.disconnect(topic_id)
@@ -45,6 +74,10 @@ async def websocket_room_default(ws: WebSocket):
                 room = room_manager.get_room("__default__")
                 if room:
                     room.handle_ack()
+            elif msg_type == "barge_in":
+                room = room_manager.get_room("__default__")
+                if room:
+                    room.handle_barge_in()
 
     except WebSocketDisconnect:
         room_manager.disconnect("__default__")

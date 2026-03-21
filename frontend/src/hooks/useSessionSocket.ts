@@ -8,7 +8,22 @@ export function useSessionSocket(sessionId: string) {
   const ws = useRef<WebSocket | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioContext = useRef<AudioContext | null>(null);
+  const currentAudioSource = useRef<AudioBufferSourceNode | null>(null);
+  const isAgentSpeaking = useRef(false);
   const store = useSessionStore();
+
+  /** Stop any currently playing agent audio immediately */
+  const stopAgentAudio = useCallback(() => {
+    if (currentAudioSource.current) {
+      try {
+        currentAudioSource.current.stop();
+      } catch {
+        // already stopped
+      }
+      currentAudioSource.current = null;
+    }
+    isAgentSpeaking.current = false;
+  }, []);
 
   const playAudioBytes = useCallback(async (bytes: ArrayBuffer) => {
     if (!audioContext.current) {
@@ -19,11 +34,43 @@ export function useSessionSocket(sessionId: string) {
       const source = audioContext.current.createBufferSource();
       source.buffer = buffer;
       source.connect(audioContext.current.destination);
+
+      // Track the source so we can stop it on barge-in
+      currentAudioSource.current = source;
+      isAgentSpeaking.current = true;
+
+      source.onended = () => {
+        if (currentAudioSource.current === source) {
+          currentAudioSource.current = null;
+          isAgentSpeaking.current = false;
+        }
+      };
+
       source.start();
     } catch (e) {
       console.error('Audio playback error:', e);
     }
   }, []);
+
+  /** Called by VAD when user starts speaking - triggers barge-in */
+  const onUserSpeechStart = useCallback(() => {
+    if (isAgentSpeaking.current) {
+      console.log('[VAD] Barge-in: user started speaking, stopping agent audio');
+      stopAgentAudio();
+      // Notify backend to cancel any in-progress generation
+      ws.current?.send(JSON.stringify({ type: 'barge_in' }));
+    }
+  }, [stopAgentAudio]);
+
+  /** Called by VAD when user stops speaking - trigger processing */
+  const onUserSpeechEnd = useCallback(() => {
+    if (store.isMicActive && ws.current?.readyState === WebSocket.OPEN) {
+      // Signal the backend that the user finished a speech segment
+      ws.current.send(JSON.stringify({ type: 'mic_active', active: false }));
+      // Re-arm for next speech segment
+      ws.current.send(JSON.stringify({ type: 'mic_active', active: true }));
+    }
+  }, [store.isMicActive]);
 
   const handleServerEvent = useCallback((event: ServerEvent) => {
     switch (event.type) {
@@ -135,5 +182,14 @@ export function useSessionSocket(sessionId: string) {
     }
   }, [store.isMicActive, startRecording, stopRecording]);
 
-  return { startSession, endSession, toggleMic, startRecording, stopRecording };
+  return {
+    startSession,
+    endSession,
+    toggleMic,
+    startRecording,
+    stopRecording,
+    stopAgentAudio,
+    onUserSpeechStart,
+    onUserSpeechEnd,
+  };
 }

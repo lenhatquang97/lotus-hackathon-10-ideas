@@ -24,6 +24,8 @@ class ConversationOrchestrator:
         self.silence_task: Optional[asyncio.Task] = None
         self.audio_buffer: bytes = b""
         self.is_active = False
+        self.is_interrupted = False
+        self.response_task: Optional[asyncio.Task] = None
         self.live_scores = {"tone": 0.5, "content": 0.5, "first_voice": 0.5}
         self.turn_count = 0
 
@@ -55,9 +57,23 @@ class ConversationOrchestrator:
             await self.initialize()
         elif event_type == "end_session":
             await self.end_session()
+        elif event_type == "barge_in":
+            await self.handle_barge_in()
         elif event_type == "mic_active":
             if not event.get("active") and self.audio_buffer:
                 await self.process_audio_buffer()
+
+    async def handle_barge_in(self):
+        """User started speaking while agent was talking - cancel agent response."""
+        self.is_interrupted = True
+        # Cancel any in-progress response generation
+        if self.response_task and not self.response_task.done():
+            self.response_task.cancel()
+            self.response_task = None
+        # Signal speech end to frontend
+        await self.send_event({"type": "character_speech_end", "text": "[interrupted]"})
+        self._reset_silence_timer()
+        print(f"[Barge-in] User interrupted agent in session {self.session_id}")
 
     async def handle_audio_chunk(self, chunk: bytes):
         if self.is_active:
@@ -113,60 +129,82 @@ class ConversationOrchestrator:
         if not self.agents:
             return
 
-        agent = self._select_responding_agent()
-        character = agent.character
-        char_id = str(character.get("id", character.get("_id", "")))
+        self.is_interrupted = False
+        self.response_task = asyncio.current_task()
 
-        response_text = await agent.generate_response(self.conversation_history)
-        self.conversation_history.append(
-            {
-                "role": "assistant",
-                "content": f"[{character['name']}]: {response_text}",
-            }
-        )
+        try:
+            agent = self._select_responding_agent()
+            character = agent.character
+            char_id = str(character.get("id", character.get("_id", "")))
 
-        await self.send_event(
-            {
-                "type": "character_speech_start",
+            response_text = await agent.generate_response(self.conversation_history)
+
+            # Check if user interrupted during generation
+            if self.is_interrupted:
+                self.response_task = None
+                return
+
+            self.conversation_history.append(
+                {
+                    "role": "assistant",
+                    "content": f"[{character['name']}]: {response_text}",
+                }
+            )
+
+            await self.send_event(
+                {
+                    "type": "character_speech_start",
+                    "character_id": char_id,
+                    "character_name": character["name"],
+                }
+            )
+
+            audio_bytes = await synthesize_speech(
+                response_text, character.get("voice_id", "")
+            )
+
+            # Check again before sending audio
+            if self.is_interrupted:
+                await self.send_event({"type": "character_speech_end", "text": ""})
+                self.response_task = None
+                return
+
+            if audio_bytes:
+                await self.websocket.send_bytes(audio_bytes)
+
+            char_turn_id = str(uuid.uuid4())
+            char_timestamp = datetime.utcnow()
+            char_turn = {
+                "turn_id": char_turn_id,
+                "speaker": "character",
                 "character_id": char_id,
                 "character_name": character["name"],
-            }
-        )
-
-        audio_bytes = await synthesize_speech(
-            response_text, character.get("voice_id", "")
-        )
-        if audio_bytes:
-            await self.websocket.send_bytes(audio_bytes)
-
-        char_turn_id = str(uuid.uuid4())
-        char_timestamp = datetime.utcnow()
-        char_turn = {
-            "turn_id": char_turn_id,
-            "speaker": "character",
-            "character_id": char_id,
-            "character_name": character["name"],
-            "text": response_text,
-            "timestamp": char_timestamp,
-            "evaluation_snapshot": {
-                "tone_score": 0.0,
-                "content_score": 0.0,
-                "first_voice_score": 0.0,
-            },
-        }
-        await session_repo.add_transcript_turn(self.session_id, char_turn)
-        await self.send_event(
-            {"type": "character_speech_end", "text": response_text}
-        )
-        await self.send_event(
-            {
-                "type": "transcript_update",
-                "turn": {
-                    **char_turn,
-                    "timestamp": char_timestamp.isoformat(),
+                "text": response_text,
+                "timestamp": char_timestamp,
+                "evaluation_snapshot": {
+                    "tone_score": 0.0,
+                    "content_score": 0.0,
+                    "first_voice_score": 0.0,
                 },
             }
-        )
+            await session_repo.add_transcript_turn(self.session_id, char_turn)
+            await self.send_event(
+                {"type": "character_speech_end", "text": response_text}
+            )
+            await self.send_event(
+                {
+                    "type": "transcript_update",
+                    "turn": {
+                        **char_turn,
+                        "timestamp": char_timestamp.isoformat(),
+                    },
+                }
+            )
+        except asyncio.CancelledError:
+            # Barge-in cancelled this task
+            print(f"[Barge-in] Response generation cancelled in session {self.session_id}")
+        finally:
+            self.response_task = None
 
         self._reset_silence_timer()
 
