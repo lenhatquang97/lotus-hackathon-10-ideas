@@ -1,331 +1,230 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessionStore } from '../stores/sessionStore';
 import { useSessionSocket } from '../hooks/useSessionSocket';
-import { topicsApi, sessionsApi } from '../services/api';
-import { TranscriptTurn } from '../types';
+import { sessionsApi, topicsApi } from '../services/api';
+import { Scene3D } from '../components/scene/Scene3D';
+import type { TranscriptTurn } from '../types';
+
+function ConversationHUD({ agentName, agentRole, isConnected, isSpeaking, sessionStartTime }: {
+  agentName: string; agentRole: string; isConnected: boolean; isSpeaking: boolean; sessionStartTime: number | null;
+}) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!sessionStartTime) return;
+    const interval = setInterval(() => setElapsed(Math.floor((Date.now() - sessionStartTime) / 1000)), 1000);
+    return () => clearInterval(interval);
+  }, [sessionStartTime]);
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+
+  return (
+    <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10 pointer-events-none">
+      <div className="pointer-events-auto px-4 py-2.5 flex items-center gap-3" style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+        {isSpeaking && (
+          <span className="flex gap-0.5 items-end" style={{ height: '12px' }}>
+            {[1, 2, 3].map(i => (
+              <span key={i} className="animate-pulse" style={{ width: '2px', height: `${4 + i * 3}px`, backgroundColor: 'rgba(255,255,255,0.7)', display: 'block', animationDelay: `${i * 0.15}s` }} />
+            ))}
+          </span>
+        )}
+        <span className="font-display text-[14px] text-white">{agentName}</span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)' }}>{agentRole}</span>
+      </div>
+      <div className="pointer-events-auto px-4 py-2.5 flex items-center gap-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+        <div className="flex items-center gap-1.5">
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isConnected ? 'white' : 'rgba(255,255,255,0.3)', display: 'block' }} />
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.6)' }}>{isConnected ? 'Live' : 'Connecting'}</span>
+        </div>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'white' }}>
+          {mins.toString().padStart(2, '0')}:{secs.toString().padStart(2, '0')}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function TranscriptPanel({ transcript }: { transcript: TranscriptTurn[] }) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [transcript]);
+
+  if (transcript.length === 0) return (
+    <div className="h-full flex items-center justify-center">
+      <p className="meta" style={{ fontSize: '11px' }}>Conversation will appear here...</p>
+    </div>
+  );
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="p-4 space-y-3">
+        {transcript.map(entry => (
+          <div key={entry.turn_id} className={`flex flex-col ${entry.speaker === 'learner' ? 'items-end' : 'items-start'}`}>
+            <span className="meta mb-1" style={{ fontSize: '9px', letterSpacing: '0.12em' }}>
+              {entry.speaker === 'learner' ? 'YOU' : (entry.character_name?.toUpperCase() || 'AGENT')}
+            </span>
+            <div className="max-w-[85%] px-3 py-2 font-body text-[13px] leading-relaxed"
+              style={{ backgroundColor: entry.speaker === 'learner' ? 'var(--color-ink)' : 'var(--color-paper)', color: entry.speaker === 'learner' ? 'white' : 'var(--color-ink)' }}>
+              {entry.text}
+            </div>
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+    </div>
+  );
+}
+
+function ScoreArc({ label, value, color }: { label: string; value: number; color: string }) {
+  const pct = Math.round(value * 100);
+  const r = 20;
+  const circ = 2 * Math.PI * r;
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative" style={{ width: 56, height: 56 }}>
+        <svg viewBox="0 0 56 56" className="w-full h-full" style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx="28" cy="28" r={r} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="4" />
+          <circle cx="28" cy="28" r={r} fill="none" stroke={color} strokeWidth="4"
+            strokeDasharray={circ} strokeDashoffset={circ * (1 - value)}
+            strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center font-ui text-[11px] font-medium" style={{ color }}>{pct}</span>
+      </div>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.5)' }}>{label}</span>
+    </div>
+  );
+}
 
 export default function ActiveSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const store = useSessionStore();
   const { startSession, endSession, toggleMic } = useSessionSocket(sessionId!);
+  const [activeCharIdx, setActiveCharIdx] = useState(0);
+  const [sessionStartTime] = useState(Date.now());
+  const [ending, setEnding] = useState(false);
 
   useEffect(() => {
     if (!sessionId) return;
     sessionsApi.get(sessionId).then(res => {
       store.setSession(res.data);
-      // Load topic info for character display
       return topicsApi.get(res.data.topic_id);
-    }).then(res => {
-      store.setTopic(res.data);
-    }).catch(console.error);
+    }).then(res => store.setTopic(res.data));
   }, [sessionId]);
 
   useEffect(() => {
-    const timer = setTimeout(() => startSession(), 500);
+    const timer = setTimeout(() => startSession(), 600);
     return () => clearTimeout(timer);
   }, []);
 
-  const handleEndSession = async () => {
-    endSession();
-    try {
-      await sessionsApi.end(sessionId!);
-    } catch (e) {
-      console.error(e);
+  useEffect(() => {
+    if (store.activeSpeaker && (store.topic as any)?.characters) {
+      const idx = (store.topic as any).characters.findIndex((c: any) => c.id === store.activeSpeaker?.character_id);
+      if (idx >= 0) setActiveCharIdx(idx);
     }
-    setTimeout(() => navigate(`/session/${sessionId}/debrief`), 1000);
+  }, [store.activeSpeaker]);
+
+  const handleEnd = async () => {
+    setEnding(true);
+    endSession();
+    try { await sessionsApi.end(sessionId!); } catch {}
+    setTimeout(() => navigate(`/session/${sessionId}/debrief`), 1200);
   };
 
-  const { liveScores, transcript, activeSpeaker, showSilenceOverlay, isMicActive, topic } = store;
-  const topicData = topic as { characters?: Array<{ id: string; name: string; role: string; avatar_preset: string }> } | null;
+  const characters = (store.topic as any)?.characters || [];
+  const activeChar = characters[activeCharIdx];
+
+  if (ending) return (
+    <div className="h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--color-ink)' }}>
+      <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mb-4" />
+      <p className="font-display italic text-white text-lg">Analysing your conversation...</p>
+      <p className="meta mt-2" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>Your coach is reviewing your performance</p>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col relative overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/60 via-gray-950 to-gray-950 pointer-events-none" />
-      <div className="absolute top-0 left-1/3 w-72 h-72 bg-primary-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-0 right-1/3 w-72 h-72 bg-accent-600/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="h-screen flex flex-col" style={{ backgroundColor: '#1a1a1a' }}>
+      {/* 3D Scene */}
+      <div className="flex-1 relative">
+        <Scene3D
+          environment="office"
+          characters={characters}
+          activeCharacterId={store.activeSpeaker?.character_id || characters[activeCharIdx]?.id}
+          isSpeaking={!!store.activeSpeaker}
+        />
 
-      {/* Main layout */}
-      <div className="relative z-10 flex flex-col h-screen">
+        {/* HUD overlay */}
+        <ConversationHUD
+          agentName={activeChar?.name || 'Agent'}
+          agentRole={activeChar?.role || ''}
+          isConnected={store.isSessionActive}
+          isSpeaking={!!store.activeSpeaker}
+          sessionStartTime={sessionStartTime}
+        />
 
-        {/* Top HUD - Live Scores */}
-        <div className="shrink-0">
-          <HUDArc scores={liveScores} />
+        {/* Live scores */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-5 py-3 flex items-center gap-5"
+          style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+          <ScoreArc label="Tone" value={store.liveScores.tone} color="#a78bfa" />
+          <ScoreArc label="Content" value={store.liveScores.content} color="#34d399" />
+          <ScoreArc label="Voice" value={store.liveScores.first_voice} color="#60a5fa" />
         </div>
 
-        {/* Agent Cards */}
-        <div className="shrink-0 flex justify-center gap-6 mt-4 px-8 flex-wrap">
-          {topicData?.characters?.map((char) => (
-            <AgentCard
-              key={char.id}
-              character={char}
-              isSpeaking={activeSpeaker?.character_id === char.id}
-            />
-          ))}
-          {(!topicData?.characters || topicData.characters.length === 0) && (
-            <div className="flex gap-6">
-              {[1, 2].map(i => (
-                <div key={i} className="flex flex-col items-center gap-2 opacity-30 animate-pulse">
-                  <div className="w-20 h-20 rounded-full bg-gray-700 border-4 border-gray-600" />
-                  <div className="w-20 h-3 bg-gray-700 rounded" />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Transcript Feed */}
-        <div className="flex-1 overflow-y-auto px-8 py-4 mt-4">
-          <div className="max-w-3xl mx-auto w-full">
-            <TranscriptFeed turns={transcript} />
-          </div>
-        </div>
-
-        {/* Silence Overlay */}
-        {showSilenceOverlay && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20">
-            <div className="bg-gray-800 border border-gray-600 rounded-2xl p-8 text-center max-w-sm mx-4 shadow-2xl">
-              <div className="text-5xl mb-4 animate-bounce">🤫</div>
-              <p className="text-white text-xl font-semibold mb-2">It's your turn to speak!</p>
-              <p className="text-gray-400">Press the mic button and share your thoughts</p>
-            </div>
+        {/* Agent switcher */}
+        {characters.length > 1 && (
+          <div className="absolute bottom-4 left-4 z-10 flex gap-px">
+            {characters.map((char: any, i: number) => (
+              <button key={char.id} onClick={() => setActiveCharIdx(i)}
+                className="px-3 py-1.5 font-ui text-[11px] uppercase transition-all"
+                style={{ backgroundColor: activeCharIdx === i ? 'white' : 'rgba(0,0,0,0.6)', color: activeCharIdx === i ? 'black' : 'white', backdropFilter: 'blur(4px)' }}>
+                {char.name}
+              </button>
+            ))}
           </div>
         )}
 
-        {/* Audio Control Bar */}
-        <div className="shrink-0 bg-gray-900/90 backdrop-blur border-t border-gray-800 px-8 py-4">
-          <div className="flex items-center justify-center gap-8 max-w-lg mx-auto">
-            {/* Mic toggle */}
-            <div className="flex flex-col items-center gap-1">
-              <button
-                onClick={toggleMic}
-                className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl transition-all duration-300 ${
-                  isMicActive
-                    ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/50 scale-110'
-                    : 'bg-gray-700 hover:bg-gray-600'
-                }`}
-              >
-                {isMicActive ? '🎙️' : '🎤'}
-              </button>
-              <span className="text-xs text-gray-500">{isMicActive ? 'Tap to mute' : 'Tap to speak'}</span>
-            </div>
+        {/* End button */}
+        <div className="absolute bottom-4 right-4 z-10">
+          <button onClick={handleEnd}
+            className="px-4 py-2 font-body text-[13px] transition-opacity"
+            style={{ backgroundColor: 'rgba(255,255,255,0.9)', color: 'var(--color-ink)', backdropFilter: 'blur(4px)' }}>
+            End Session
+          </button>
+        </div>
 
-            {/* Waveform animation when mic active */}
-            {isMicActive && (
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map(i => (
-                  <div
-                    key={i}
-                    className="w-1.5 bg-green-400 rounded-full animate-bounce"
-                    style={{
-                      height: `${Math.random() * 20 + 8}px`,
-                      animationDelay: `${i * 0.1}s`,
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* End Session */}
-            <div className="flex flex-col items-center gap-1">
-              <button
-                onClick={handleEndSession}
-                className="px-6 py-3 bg-gray-700 hover:bg-red-800 text-white rounded-xl font-medium transition-all"
-              >
-                End Session
-              </button>
-              <span className="text-xs text-gray-500">Go to debrief</span>
+        {/* Silence overlay */}
+        {store.showSilenceOverlay && (
+          <div className="absolute inset-0 flex items-center justify-center z-20" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+            <div className="text-center p-10" style={{ backgroundColor: 'var(--color-paper)' }}>
+              <p className="font-display text-[28px] italic mb-2" style={{ color: 'var(--color-ink)' }}>Your turn to speak</p>
+              <p className="meta" style={{ fontSize: '11px' }}>Press the mic button and share your thoughts</p>
             </div>
           </div>
-
-          {isMicActive && (
-            <p className="text-center text-green-400 text-sm mt-2 animate-pulse font-medium">
-              Recording — speak naturally
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// HUDArc Component
-function HUDArc({
-  scores,
-}: {
-  scores: { tone: number; content: number; first_voice: number };
-}) {
-  return (
-    <div className="flex justify-center pt-4 px-8">
-      <div className="bg-gray-900/80 backdrop-blur border border-gray-700 rounded-2xl px-10 py-4 flex items-center gap-10 shadow-lg">
-        <ScoreSegment label="Tone" value={scores.tone} color="#a78bfa" />
-        <div className="w-px h-12 bg-gray-700" />
-        <ScoreSegment label="Content" value={scores.content} color="#34d399" />
-        <div className="w-px h-12 bg-gray-700" />
-        <ScoreSegment label="First Voice" value={scores.first_voice} color="#60a5fa" />
-      </div>
-    </div>
-  );
-}
-
-function ScoreSegment({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color: string;
-}) {
-  const pct = Math.round(value * 100);
-  const circumference = 2 * Math.PI * 22;
-
-  return (
-    <div className="flex flex-col items-center gap-1.5">
-      <div className="relative w-16 h-16">
-        <svg viewBox="0 0 56 56" className="w-full h-full -rotate-90">
-          <circle cx="28" cy="28" r="22" fill="none" stroke="#1f2937" strokeWidth="5" />
-          <circle
-            cx="28"
-            cy="28"
-            r="22"
-            fill="none"
-            stroke={color}
-            strokeWidth="5"
-            strokeDasharray={circumference}
-            strokeDashoffset={circumference * (1 - value)}
-            strokeLinecap="round"
-            style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}
-          />
-        </svg>
-        <span
-          className="absolute inset-0 flex items-center justify-center text-sm font-bold tabular-nums"
-          style={{ color }}
-        >
-          {pct}
-        </span>
-      </div>
-      <span className="text-xs text-gray-400 font-medium">{label}</span>
-    </div>
-  );
-}
-
-// AgentCard Component
-function AgentCard({
-  character,
-  isSpeaking,
-}: {
-  character: { id: string; name: string; role: string; avatar_preset: string };
-  isSpeaking: boolean;
-}) {
-  const avatarEmoji =
-    character.avatar_preset === 'professional'
-      ? '👔'
-      : character.avatar_preset === 'academic'
-      ? '🎓'
-      : character.avatar_preset === 'casual'
-      ? '😊'
-      : '🧑';
-
-  return (
-    <div
-      className={`flex flex-col items-center gap-2 transition-all duration-300 ${
-        isSpeaking ? 'scale-110' : 'scale-100'
-      }`}
-    >
-      <div
-        className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl border-4 bg-gray-800 transition-all duration-300 ${
-          isSpeaking
-            ? 'border-green-400 shadow-lg shadow-green-400/40'
-            : 'border-gray-600'
-        }`}
-      >
-        {avatarEmoji}
+        )}
       </div>
 
-      {/* Speaking wave animation */}
-      {isSpeaking && (
-        <div className="flex gap-1 items-end h-5">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="w-1.5 rounded-full bg-green-400"
+      {/* Transcript panel */}
+      <div style={{ height: '192px', borderTop: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}>
+        <div className="h-full flex">
+          <div className="flex-1 overflow-hidden">
+            <TranscriptPanel transcript={store.transcript} />
+          </div>
+          {/* Mic control */}
+          <div className="flex flex-col items-center justify-center px-6 gap-2" style={{ borderLeft: '1px solid rgba(255,255,255,0.1)' }}>
+            <button onClick={toggleMic}
+              className="w-14 h-14 rounded-full flex items-center justify-center text-xl transition-all"
               style={{
-                animation: 'bounce 0.6s infinite',
-                animationDelay: `${i * 0.1}s`,
-                height: `${[12, 18, 14, 10][i - 1]}px`,
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      <div className="text-center">
-        <p className="text-white font-semibold text-sm">{character.name}</p>
-        <p className="text-gray-400 text-xs">{character.role}</p>
-      </div>
-    </div>
-  );
-}
-
-// TranscriptFeed Component
-function TranscriptFeed({ turns }: { turns: TranscriptTurn[] }) {
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [turns]);
-
-  if (turns.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-gray-600">
-        <div className="text-4xl mb-3">💬</div>
-        <p className="text-sm">Conversation will appear here...</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {turns.map((turn) => (
-        <div
-          key={turn.turn_id}
-          className={`flex ${turn.speaker === 'learner' ? 'justify-end' : 'justify-start'}`}
-        >
-          <div
-            className={`max-w-xs lg:max-w-md xl:max-w-lg px-4 py-3 rounded-2xl ${
-              turn.speaker === 'learner'
-                ? 'bg-primary-600 text-white rounded-br-sm'
-                : 'bg-gray-800 border border-gray-700 text-gray-100 rounded-bl-sm'
-            }`}
-          >
-            {turn.speaker === 'character' && turn.character_name && (
-              <p className="text-xs text-primary-400 mb-1.5 font-semibold">{turn.character_name}</p>
-            )}
-            <p className="text-sm leading-relaxed">{turn.text}</p>
-            {/* Mini score snapshot */}
-            {turn.evaluation_snapshot && (
-              <div className="flex gap-2 mt-2 pt-2 border-t border-white/10">
-                <MiniScore value={turn.evaluation_snapshot.tone_score} color="#a78bfa" label="T" />
-                <MiniScore value={turn.evaluation_snapshot.content_score} color="#34d399" label="C" />
-                <MiniScore value={turn.evaluation_snapshot.first_voice_score} color="#60a5fa" label="F" />
-              </div>
-            )}
+                backgroundColor: store.isMicActive ? 'white' : 'rgba(255,255,255,0.1)',
+                color: store.isMicActive ? 'black' : 'white',
+                boxShadow: store.isMicActive ? '0 0 0 4px rgba(255,255,255,0.2)' : 'none',
+              }}>
+              {store.isMicActive ? '🎙️' : '🎤'}
+            </button>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', textTransform: 'uppercase', color: store.isMicActive ? 'white' : 'rgba(255,255,255,0.3)' }}>
+              {store.isMicActive ? 'Recording' : 'Tap to speak'}
+            </span>
           </div>
         </div>
-      ))}
-      <div ref={bottomRef} />
+      </div>
     </div>
-  );
-}
-
-function MiniScore({ value, color, label }: { value: number; color: string; label: string }) {
-  if (!value) return null;
-  return (
-    <span className="text-xs font-medium" style={{ color }}>
-      {label}:{Math.round(value * 100)}
-    </span>
   );
 }

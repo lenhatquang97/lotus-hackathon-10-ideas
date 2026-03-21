@@ -3,20 +3,16 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      borderRadius: {
+        DEFAULT: '2px',
+        sm: '2px', md: '2px', lg: '2px', xl: '2px',
+      },
       colors: {
-        primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          900: '#0c4a6e'
-        },
-        accent: {
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed'
-        },
+        ink: '#0A0A0A',
+        ash: '#6B6B6B',
+        fog: '#E8E8E8',
+        paper: '#F7F6F4',
+        surface: '#FFFFFF',
       }
     },
   },

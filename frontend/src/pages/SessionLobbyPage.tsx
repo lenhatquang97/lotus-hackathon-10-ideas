@@ -1,175 +1,112 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { sessionsApi, topicsApi } from '../services/api';
-import { Topic } from '../types';
-import { Navbar } from './DashboardPage';
+import { useSessionStore } from '../stores/sessionStore';
+import type { Topic } from '../types';
 
 export default function SessionLobbyPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const navigate = useNavigate();
   const [topic, setTopic] = useState<Topic | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [micChecked, setMicChecked] = useState(false);
-  const [micError, setMicError] = useState('');
-  const [micChecking, setMicChecking] = useState(false);
+  const [micOk, setMicOk] = useState(false);
+  const [checkingMic, setCheckingMic] = useState(false);
+  const store = useSessionStore();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!sessionId) return;
-    sessionsApi.get(sessionId)
-      .then(res => {
-        const session = res.data;
-        return topicsApi.get(session.topic_id);
-      })
-      .then(res => setTopic(res.data))
-      .catch(() => navigate('/topics'))
-      .finally(() => setLoading(false));
+    sessionsApi.get(sessionId).then(async res => {
+      store.setSession(res.data);
+      const t = await topicsApi.get(res.data.topic_id);
+      setTopic(t.data);
+      store.setTopic(t.data);
+    });
   }, [sessionId]);
 
-  const checkMicPermission = async () => {
-    setMicChecking(true);
-    setMicError('');
+  const checkMic = async () => {
+    setCheckingMic(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach(t => t.stop());
-      setMicChecked(true);
-    } catch (e) {
-      setMicError('Microphone access denied. Please allow microphone access in your browser settings.');
+      setMicOk(true);
+    } catch {
+      alert('Please allow microphone access to continue.');
     } finally {
-      setMicChecking(false);
+      setCheckingMic(false);
     }
   };
 
-  const handleEnter = () => {
-    navigate(`/session/${sessionId}`);
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-950">
-        <Navbar />
-        <div className="flex items-center justify-center h-64">
-          <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-        </div>
-      </div>
-    );
-  }
+  if (!topic) return (
+    <div className="min-h-screen flex items-center justify-center meta" style={{ backgroundColor: 'var(--color-paper)' }}>
+      Loading...
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-950">
-      <Navbar />
+    <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ backgroundColor: 'var(--color-paper)' }}>
+      <div className="w-full max-w-[560px]">
+        {/* Meta */}
+        <div className="flex items-center gap-4 mb-5">
+          {topic.tags.map(t => (
+            <span key={t} className="meta" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>{t.toUpperCase()}</span>
+          ))}
+          {topic.cefr_levels.map(l => (
+            <span key={l} className="meta ml-auto px-2 py-0.5 border" style={{ fontSize: '10px', borderColor: 'var(--color-fog)' }}>{l}</span>
+          ))}
+        </div>
 
-      <main className="max-w-2xl mx-auto px-8 py-12">
-        {/* Session Info */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-full text-green-400 text-sm mb-6">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            Session Ready
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
-            {topic?.title || 'Conversation Session'}
-          </h1>
-          <p className="text-gray-400">
-            You're about to join a conversation with {topic?.characters?.length || 0} AI character
-            {topic?.characters?.length !== 1 ? 's' : ''}
+        <h1 className="font-display text-[40px] font-semibold leading-[1.1] mb-4" style={{ color: 'var(--color-ink)' }}>
+          {topic.title}
+        </h1>
+
+        <div className="p-5 border mb-7" style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-surface)' }}>
+          <p className="font-body text-[13px] leading-relaxed" style={{ color: 'var(--color-ash)' }}>
+            {topic.description}
           </p>
         </div>
 
-        {/* Characters Preview */}
-        {topic?.characters && topic.characters.length > 0 && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-6">
-            <h2 className="text-white font-semibold mb-4">Your conversation partners</h2>
-            <div className="space-y-3">
-              {topic.characters.map(char => (
-                <div key={char.id} className="flex items-center gap-4 p-3 bg-gray-800/50 rounded-xl">
-                  <div className="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-2xl">
-                    {char.avatar_preset === 'professional' ? '👔' :
-                     char.avatar_preset === 'academic' ? '🎓' :
-                     char.avatar_preset === 'casual' ? '😊' : '🧑'}
-                  </div>
-                  <div>
-                    <p className="text-white font-medium">{char.name}</p>
-                    <p className="text-gray-400 text-sm">{char.role}</p>
-                  </div>
-                  <div className="ml-auto">
-                    <span className="px-2 py-1 bg-gray-700 rounded-lg text-xs text-gray-400">
-                      {char.voice_id || 'Default voice'}
-                    </span>
-                  </div>
-                </div>
-              ))}
+        {/* Agent list */}
+        <div className="mb-7 space-y-px" style={{ backgroundColor: 'var(--color-fog)' }}>
+          {topic.characters.map(char => (
+            <div key={char.id} className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: 'var(--color-surface)' }}>
+              <div className="w-9 h-9 flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: 'var(--color-fog)', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-ash)' }}>
+                {char.name.slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <p className="font-body font-medium text-[15px]" style={{ color: 'var(--color-ink)' }}>{char.name}</p>
+                <p className="meta" style={{ fontSize: '10px' }}>{char.role}</p>
+              </div>
             </div>
-          </div>
+          ))}
+        </div>
+
+        {/* Mic check */}
+        {!micOk && (
+          <button
+            onClick={checkMic}
+            disabled={checkingMic}
+            className="w-full py-3 mb-3 font-body text-[13px] border transition-all disabled:opacity-40 hover:bg-ink hover:text-white hover:border-ink"
+            style={{ borderColor: 'var(--color-fog)', color: 'var(--color-ink)' }}
+          >
+            {checkingMic ? 'Checking...' : 'Test Microphone'}
+          </button>
+        )}
+        {micOk && (
+          <p className="text-center meta mb-3" style={{ fontSize: '10px', color: '#4ade80' }}>Microphone ready</p>
         )}
 
-        {/* Instructions */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-6">
-          <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
-            <span>💡</span>
-            How it works
-          </h2>
-          <ul className="space-y-3 text-sm text-gray-400">
-            {[
-              'The AI characters will initiate the conversation. Listen carefully.',
-              'Press the microphone button when you want to speak.',
-              'Your performance is tracked in 3 dimensions: Tone, Content, and First Voice.',
-              'First Voice score rewards you for initiating turns and asking questions.',
-              'When done, press "End Session" to receive your personalized debrief.',
-            ].map((tip, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <span className="w-5 h-5 rounded-full bg-primary-600/30 text-primary-400 flex items-center justify-center text-xs shrink-0 mt-0.5">
-                  {i + 1}
-                </span>
-                {tip}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Mic Check */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-8">
-          <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
-            <span>🎙️</span>
-            Microphone Check
-          </h2>
-          {micChecked ? (
-            <div className="flex items-center gap-3 text-green-400">
-              <span className="text-xl">✅</span>
-              <span className="font-medium">Microphone ready!</span>
-            </div>
-          ) : (
-            <>
-              <p className="text-gray-400 text-sm mb-4">
-                Allow microphone access so you can speak during the session.
-              </p>
-              {micError && (
-                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
-                  {micError}
-                </div>
-              )}
-              <button
-                onClick={checkMicPermission}
-                disabled={micChecking}
-                className="px-5 py-2.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
-              >
-                {micChecking ? 'Checking...' : 'Test Microphone'}
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Enter Button */}
         <button
-          onClick={handleEnter}
-          className="w-full py-4 bg-gradient-to-r from-primary-600 to-accent-600 hover:from-primary-500 hover:to-accent-500 text-white rounded-2xl font-semibold text-lg transition-all hover:scale-[1.02] shadow-lg"
+          onClick={() => navigate(`/session/${sessionId}`)}
+          disabled={!micOk}
+          className="w-full py-4 font-body text-[13px] uppercase tracking-[0.1em] transition-opacity disabled:opacity-40 mb-2"
+          style={{ backgroundColor: 'var(--color-ink)', color: 'white' }}
         >
-          Enter Session
+          Drop In
         </button>
-        {!micChecked && (
-          <p className="text-center text-gray-500 text-xs mt-3">
-            You can still enter without mic check — you can enable it inside
-          </p>
-        )}
-      </main>
+        <p className="text-center meta" style={{ fontSize: '10px' }}>
+          {micOk ? 'Ready to begin' : 'Test your microphone first'}
+        </p>
+      </div>
     </div>
   );
 }

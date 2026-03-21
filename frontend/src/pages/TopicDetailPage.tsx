@@ -1,202 +1,119 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { topicsApi, sessionsApi } from '../services/api';
-import { Topic, Character } from '../types';
-import { Navbar } from './DashboardPage';
+import { Navbar } from '../components/Navbar';
+import type { Topic } from '../types';
 
 export default function TopicDetailPage() {
   const { topicId } = useParams<{ topicId: string }>();
-  const navigate = useNavigate();
   const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(true);
-  const [starting, setStarting] = useState(false);
-  const [expandedBias, setExpandedBias] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (!topicId) return;
-    topicsApi.get(topicId)
-      .then(res => setTopic(res.data))
-      .catch(() => navigate('/topics'))
-      .finally(() => setLoading(false));
+    if (topicId) topicsApi.get(topicId).then(r => setTopic(r.data)).finally(() => setLoading(false));
   }, [topicId]);
 
   const handleStart = async () => {
-    if (!topicId) return;
-    setStarting(true);
+    if (!topic) return;
+    setJoining(true);
     try {
-      const res = await sessionsApi.create(topicId);
+      const res = await sessionsApi.create(topic.id);
       navigate(`/session/${res.data.id}/lobby`);
-    } catch (e) {
-      console.error(e);
-      setStarting(false);
+    } catch {
+      setJoining(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-950">
-        <Navbar />
-        <div className="flex items-center justify-center h-64">
-          <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-        </div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-paper)' }}>
+      <Navbar />
+      <div className="flex items-center justify-center h-64 meta">Loading...</div>
+    </div>
+  );
 
-  if (!topic) return null;
+  if (!topic) return (
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-paper)' }}>
+      <Navbar />
+      <div className="flex items-center justify-center h-64 meta">World not found</div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-paper)' }}>
       <Navbar />
-
-      <main className="max-w-4xl mx-auto px-8 py-10">
-        {/* Back */}
-        <Link
-          to="/topics"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-8 text-sm"
-        >
-          ← Back to Topics
-        </Link>
-
-        {/* Header */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 mb-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex flex-wrap gap-2">
-              {topic.cefr_levels?.map(level => (
-                <span key={level} className="px-3 py-1 bg-accent-500/20 text-accent-400 rounded-lg text-sm font-medium">
-                  {level}
-                </span>
-              ))}
-              <span className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                topic.status === 'published'
-                  ? 'bg-green-500/20 text-green-400'
-                  : 'bg-gray-700 text-gray-400'
-              }`}>
-                {topic.status}
-              </span>
-            </div>
-          </div>
-
-          <h1 className="text-3xl font-bold text-white mb-3">{topic.title}</h1>
-          <p className="text-gray-400 text-lg leading-relaxed mb-6">{topic.description}</p>
-
-          {/* Tags */}
-          {topic.tags?.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-6">
-              {topic.tags.map(tag => (
-                <span key={tag} className="px-3 py-1 bg-gray-800 text-gray-400 rounded-lg text-sm">
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Stats Row */}
-          <div className="flex items-center gap-6 text-sm text-gray-400 border-t border-gray-800 pt-6">
-            <span className="flex items-center gap-2">
-              <span className="text-xl">🎭</span>
-              {topic.characters?.length || 0} AI characters
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="text-xl">▶️</span>
-              {topic.play_count || 0} sessions played
-            </span>
-            {topic.avg_score > 0 && (
-              <span className="flex items-center gap-2">
-                <span className="text-xl">⭐</span>
-                {Math.round(topic.avg_score * 100)}% average score
-              </span>
-            )}
-          </div>
+      <div className="max-w-[800px] mx-auto px-12 py-16">
+        {/* Meta */}
+        <div className="flex items-center gap-4 mb-6">
+          {topic.tags.map(t => (
+            <span key={t} className="meta" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>{t.toUpperCase()}</span>
+          ))}
+          <span className="meta" style={{ fontSize: '10px' }}>·</span>
+          {topic.cefr_levels.map(l => (
+            <span key={l} className="meta px-2 py-0.5 border" style={{ fontSize: '10px', borderColor: 'var(--color-fog)' }}>{l}</span>
+          ))}
         </div>
 
-        {/* Domain Knowledge */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-            <span>📖</span>
-            Background Knowledge
-          </h2>
-          <p className="text-gray-400 leading-relaxed text-sm">{topic.domain_knowledge}</p>
+        <h1 className="font-display text-[48px] font-semibold leading-[1.1] mb-6" style={{ color: 'var(--color-ink)' }}>
+          {topic.title}
+        </h1>
+
+        <p className="font-body text-[15px] leading-relaxed mb-10" style={{ color: 'var(--color-ash)' }}>
+          {topic.description}
+        </p>
+
+        {/* Scenario context */}
+        <div className="p-6 border mb-10" style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-surface)' }}>
+          <span className="meta block mb-3" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Scenario Context</span>
+          <p className="font-body text-[14px] leading-relaxed" style={{ color: 'var(--color-ink)' }}>
+            {topic.domain_knowledge}
+          </p>
         </div>
 
         {/* Characters */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-white mb-4">Meet the Characters</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            {topic.characters?.map((char) => (
-              <CharacterCard
-                key={char.id}
-                character={char}
-                expandedBias={expandedBias}
-                setExpandedBias={setExpandedBias}
-              />
+        <div className="mb-10">
+          <span className="meta block mb-5" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>
+            {topic.characters.length} {topic.characters.length === 1 ? 'Character' : 'Characters'}
+          </span>
+          <div className="space-y-px" style={{ backgroundColor: 'var(--color-fog)' }}>
+            {topic.characters.map(char => (
+              <div key={char.id} className="flex gap-4 p-5" style={{ backgroundColor: 'var(--color-surface)' }}>
+                <div
+                  className="flex-shrink-0 w-9 h-9 flex items-center justify-center"
+                  style={{ backgroundColor: 'var(--color-fog)', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-ash)' }}
+                >
+                  {char.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-baseline gap-3 mb-1">
+                    <span className="font-body font-medium text-[16px]" style={{ color: 'var(--color-ink)' }}>{char.name}</span>
+                    <span className="meta" style={{ fontSize: '10px' }}>{char.role}</span>
+                  </div>
+                  <p className="font-body text-[13px] leading-relaxed" style={{ color: 'var(--color-ash)' }}>{char.persona}</p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
 
-        {/* Start Button */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleStart}
-            disabled={starting}
-            className="flex-1 py-4 bg-primary-600 hover:bg-primary-500 disabled:opacity-50 text-white rounded-2xl font-semibold text-lg transition-all hover:scale-[1.02] shadow-lg shadow-primary-600/20"
-          >
-            {starting ? 'Preparing session...' : 'Start Practice Session'}
-          </button>
-          <Link
-            to="/topics"
-            className="px-6 py-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-2xl font-medium transition-colors"
-          >
-            Back
+        {/* CTA */}
+        <button
+          onClick={handleStart}
+          disabled={joining}
+          className="w-full py-4 font-body text-[13px] uppercase tracking-[0.1em] transition-opacity disabled:opacity-40 mb-3"
+          style={{ backgroundColor: 'var(--color-ink)', color: 'white' }}
+        >
+          {joining ? 'Entering...' : 'Drop In'}
+        </button>
+        <p className="text-center meta" style={{ fontSize: '10px' }}>Microphone required</p>
+
+        <div className="mt-6 text-center">
+          <Link to="/topics" className="font-body text-[13px] underline underline-offset-4" style={{ color: 'var(--color-ash)' }}>
+            Back to worlds
           </Link>
         </div>
-      </main>
-    </div>
-  );
-}
-
-function CharacterCard({
-  character,
-  expandedBias,
-  setExpandedBias,
-}: {
-  character: Character;
-  expandedBias: string | null;
-  setExpandedBias: (id: string | null) => void;
-}) {
-  const isExpanded = expandedBias === character.id;
-
-  return (
-    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-      <div className="flex items-start gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-gray-800 border border-gray-700 flex items-center justify-center text-3xl shrink-0">
-          {character.avatar_preset === 'professional' ? '👔' :
-           character.avatar_preset === 'academic' ? '🎓' :
-           character.avatar_preset === 'casual' ? '😊' : '🧑'}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-white font-semibold text-lg">{character.name}</h3>
-          <p className="text-primary-400 text-sm font-medium">{character.role}</p>
-        </div>
       </div>
-
-      <p className="text-gray-400 text-sm leading-relaxed mt-4">{character.persona}</p>
-
-      <button
-        onClick={() => setExpandedBias(isExpanded ? null : character.id)}
-        className="mt-3 text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1 transition-colors"
-      >
-        {isExpanded ? '▲ Hide' : '▼ Show'} communication style
-      </button>
-
-      {isExpanded && (
-        <div className="mt-3 p-3 bg-gray-800/50 rounded-xl border border-gray-700">
-          <p className="text-xs text-gray-400 leading-relaxed">
-            <span className="text-gray-300 font-medium">Communication style: </span>
-            {character.bias_perception}
-          </p>
-        </div>
-      )}
     </div>
   );
 }

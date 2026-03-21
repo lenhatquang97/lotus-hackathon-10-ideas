@@ -1,316 +1,203 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { sessionsApi, topicsApi } from '../services/api';
-import { SessionEvaluation } from '../types';
-import { Navbar } from './DashboardPage';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { sessionsApi } from '../services/api';
+import { Navbar } from '../components/Navbar';
+import type { SessionEvaluation } from '../types';
 
-interface DebriefData {
-  evaluation: SessionEvaluation;
-  topicId: string;
+function ScoreBar({ label, value }: { label: string; value: number }) {
+  const pct = Math.round(value * 100);
+  return (
+    <div className="flex items-center gap-2">
+      <span className="meta flex-1 text-left" style={{ fontSize: '9px', letterSpacing: '0.08em' }}>
+        {label.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}
+      </span>
+      <div className="relative" style={{ width: '48px', height: '1px', backgroundColor: 'var(--color-fog)' }}>
+        <div className="absolute top-0 left-0 h-full transition-all duration-1000" style={{ width: `${pct}%`, backgroundColor: 'var(--color-ink)' }} />
+      </div>
+      <span className="meta text-right" style={{ fontSize: '9px', width: '20px', fontFamily: 'var(--font-mono)' }}>{pct}</span>
+    </div>
+  );
+}
+
+function ScoreCard({ label, score, subMetrics }: { label: string; score: number; subMetrics: Record<string, number> }) {
+  return (
+    <div className="text-center">
+      <span className="meta block mb-3" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>{label.toUpperCase()}</span>
+      <span className="font-display block mb-4 leading-none" style={{ fontSize: '48px', color: 'var(--color-ink)' }}>
+        {Math.round(score * 100)}
+      </span>
+      <div className="space-y-2">
+        {Object.entries(subMetrics).map(([k, v]) => (
+          <ScoreBar key={k} label={k} value={v as number} />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function SessionDebriefPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const navigate = useNavigate();
-  const [data, setData] = useState<DebriefData | null>(null);
+  const [evaluation, setEvaluation] = useState<SessionEvaluation | null>(null);
   const [loading, setLoading] = useState(true);
-  const [retrying, setRetrying] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!sessionId) return;
-    Promise.all([
-      sessionsApi.get(sessionId),
-      sessionsApi.evaluation(sessionId),
-    ]).then(([sessionRes, evalRes]) => {
-      setData({
-        evaluation: evalRes.data,
-        topicId: sessionRes.data.topic_id,
-      });
-    }).catch(() => {
-      // Try loading from session data directly
-      sessionsApi.get(sessionId).then(res => {
-        if (res.data.evaluation) {
-          setData({ evaluation: res.data.evaluation, topicId: res.data.topic_id });
-        }
-      }).catch(console.error);
-    }).finally(() => setLoading(false));
+    const load = async () => {
+      try {
+        const [evalRes] = await Promise.all([
+          sessionsApi.evaluation(sessionId),
+          sessionsApi.get(sessionId),
+        ]);
+        setEvaluation(evalRes.data);
+      } catch {
+        try {
+          const s = await sessionsApi.get(sessionId);
+          if (s.data.evaluation) setEvaluation(s.data.evaluation);
+        } catch {}
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, [sessionId]);
 
-  const handleTryAgain = async () => {
-    if (!data?.topicId) return;
-    setRetrying(true);
-    try {
-      const res = await sessionsApi.create(data.topicId);
-      navigate(`/session/${res.data.id}/lobby`);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setRetrying(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-950">
-        <Navbar />
-        <div className="flex flex-col items-center justify-center h-64 gap-4">
-          <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400 text-sm">Loading your session report...</p>
+  if (loading) return (
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-paper)' }}>
+      <Navbar />
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-5 h-5 border-2 rounded-full animate-spin mx-auto mb-3" style={{ borderColor: 'var(--color-fog)', borderTopColor: 'var(--color-ink)' }} />
+          <p className="meta" style={{ fontSize: '11px' }}>Generating your debrief...</p>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (!data?.evaluation) {
-    return (
-      <div className="min-h-screen bg-gray-950">
-        <Navbar />
-        <div className="max-w-2xl mx-auto px-8 py-16 text-center">
-          <div className="text-5xl mb-4">⏳</div>
-          <h1 className="text-2xl font-bold text-white mb-3">Report being generated...</h1>
-          <p className="text-gray-400 mb-8">
-            Your session evaluation is still processing. Please check back in a moment.
-          </p>
-          <div className="flex gap-4 justify-center">
-            <Link to="/topics" className="px-6 py-3 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-medium transition-colors">
-              Browse Topics
-            </Link>
-            <Link to="/dashboard" className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-medium transition-colors">
-              Dashboard
-            </Link>
-          </div>
-        </div>
+  if (!evaluation) return (
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-paper)' }}>
+      <Navbar />
+      <div className="max-w-[900px] mx-auto px-12 py-16 text-center">
+        <p className="font-display text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Evaluation not available yet</p>
+        <Link to="/topics" className="font-body text-[13px] underline underline-offset-4" style={{ color: 'var(--color-ash)' }}>Explore more worlds</Link>
       </div>
-    );
-  }
+    </div>
+  );
 
-  const { evaluation } = data;
-  const score = Math.round(evaluation.composite_score * 100);
-
-  const scoreGrade = score >= 85 ? 'Excellent' : score >= 70 ? 'Good' : score >= 55 ? 'Fair' : 'Needs work';
-  const scoreColor = score >= 85 ? 'text-green-400' : score >= 70 ? 'text-yellow-400' : score >= 55 ? 'text-orange-400' : 'text-red-400';
-  const scoreBg = score >= 85 ? 'bg-green-500/20 border-green-500/30' : score >= 70 ? 'bg-yellow-500/20 border-yellow-500/30' : score >= 55 ? 'bg-orange-500/20 border-orange-500/30' : 'bg-red-500/20 border-red-500/30';
+  const e = evaluation;
+  const overallPct = Math.round(e.composite_score * 100);
+  const vocabUsed = e.vocabulary_log.filter(v => v.used_correctly).map(v => v.word);
+  const vocabAvailable = e.vocabulary_log.filter(v => !v.used_correctly).map(v => v.word);
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-paper)' }}>
       <Navbar />
-
-      <main className="max-w-4xl mx-auto px-8 py-10">
+      <div className="max-w-[900px] mx-auto px-12 py-16">
         {/* Header */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-full text-green-400 text-sm mb-6">
-            Session Complete
+        <h1 className="font-display text-[56px] italic mb-2" style={{ color: 'var(--color-ink)' }}>Session Debrief</h1>
+        <div className="flex items-center gap-4 mb-12">
+          <span className="meta" style={{ fontSize: '11px' }}>
+            {e.first_voice.turn_initiation_count} exchanges · {Math.round(e.first_voice.speaking_time_ratio * 100)}% speaking time
+          </span>
+        </div>
+
+        {/* Overall score */}
+        <div className="text-center py-12 mb-12 border-t border-b" style={{ borderColor: 'var(--color-fog)' }}>
+          <span className="meta block mb-4" style={{ fontSize: '10px', letterSpacing: '0.15em' }}>Overall Score</span>
+          <span className="font-display leading-none" style={{ fontSize: '72px', color: 'var(--color-ink)' }}>{overallPct}</span>
+        </div>
+
+        {/* 3 Dimension scores */}
+        <div className="grid grid-cols-3 gap-px mb-12" style={{ backgroundColor: 'var(--color-fog)' }}>
+          <div className="p-8" style={{ backgroundColor: 'var(--color-surface)' }}>
+            <ScoreCard
+              label="Tone"
+              score={e.tone.score}
+              subMetrics={{ formality: e.tone.formality_calibration, assertiveness: e.tone.assertiveness, emotionalCongruence: e.tone.emotional_congruence }}
+            />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Your Session Report</h1>
-          <p className="text-gray-400">Here's how you performed</p>
+          <div className="p-8" style={{ backgroundColor: 'var(--color-surface)' }}>
+            <ScoreCard
+              label="Content"
+              score={e.content.score}
+              subMetrics={{ topicalRelevance: e.content.topical_relevance, logicalCoherence: e.content.logical_coherence, vocabularyRange: e.content.vocabulary_range, grammarFluency: e.content.grammar_fluency_index }}
+            />
+          </div>
+          <div className="p-8" style={{ backgroundColor: 'var(--color-surface)' }}>
+            <ScoreCard
+              label="First Voice"
+              score={e.first_voice.score}
+              subMetrics={{ speakingTime: e.first_voice.speaking_time_ratio, questionQuality: e.first_voice.question_quality }}
+            />
+          </div>
         </div>
 
-        {/* Composite Score */}
-        <div className={`border rounded-3xl p-8 text-center mb-8 ${scoreBg}`}>
-          <div className={`text-7xl font-bold mb-2 ${scoreColor}`}>{score}</div>
-          <div className={`text-2xl font-semibold mb-1 ${scoreColor}`}>{scoreGrade}</div>
-          <p className="text-gray-400 text-sm">Composite Score (out of 100)</p>
-        </div>
-
-        {/* 3 Dimension Cards */}
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
-          <DimensionCard
-            title="Tone"
-            icon="🎭"
-            score={evaluation.tone.score}
-            color="#a78bfa"
-            metrics={[
-              { label: 'Formality', value: evaluation.tone.formality_calibration },
-              { label: 'Assertiveness', value: evaluation.tone.assertiveness },
-              { label: 'Emotional Match', value: evaluation.tone.emotional_congruence },
-            ]}
-          />
-          <DimensionCard
-            title="Content"
-            icon="📚"
-            score={evaluation.content.score}
-            color="#34d399"
-            metrics={[
-              { label: 'Topical Relevance', value: evaluation.content.topical_relevance },
-              { label: 'Coherence', value: evaluation.content.logical_coherence },
-              { label: 'Vocabulary Range', value: evaluation.content.vocabulary_range },
-              { label: 'Grammar', value: evaluation.content.grammar_fluency_index },
-            ]}
-          />
-          <DimensionCard
-            title="First Voice"
-            icon="🗣️"
-            score={evaluation.first_voice.score}
-            color="#60a5fa"
-            metrics={[
-              { label: 'Speaking Time', value: evaluation.first_voice.speaking_time_ratio },
-              { label: 'Turn Initiation', value: Math.min(evaluation.first_voice.turn_initiation_count / 5, 1) },
-              { label: 'Question Quality', value: evaluation.first_voice.question_quality },
-            ]}
-          />
-        </div>
-
-        {/* Coach Narrative */}
-        {evaluation.coach_narrative && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-6">
-            <h2 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
-              <span>🧑‍🏫</span>
-              Coach Feedback
-            </h2>
-            <div className="prose prose-invert max-w-none">
-              {evaluation.coach_narrative.split('\n\n').map((paragraph, i) => (
-                <p key={i} className="text-gray-300 leading-relaxed mb-3 last:mb-0 text-sm">
-                  {paragraph}
-                </p>
-              ))}
+        {/* Coach narrative */}
+        {e.coach_narrative && (
+          <div className="mb-12">
+            <h2 className="meta mb-5" style={{ fontSize: '11px', letterSpacing: '0.15em' }}>Your Coach Says</h2>
+            <div className="pl-6 font-body text-[15px] leading-relaxed" style={{ borderLeft: '2px solid var(--color-ink)', color: 'var(--color-ink)' }}>
+              {e.coach_narrative.split('\n').map((p, i) => p.trim() && <p key={i} className="mb-3">{p}</p>)}
             </div>
           </div>
         )}
 
-        {/* Highlight Reel */}
-        {evaluation.highlight_reel && evaluation.highlight_reel.length > 0 && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-6">
-            <h2 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
-              <span>✨</span>
-              Key Moments
-            </h2>
-            <div className="space-y-3">
-              {evaluation.highlight_reel.map((item, i) => (
-                <div key={i} className="flex gap-4 p-3 bg-gray-800/50 rounded-xl">
-                  <div className="w-8 h-8 rounded-lg bg-accent-500/20 text-accent-400 flex items-center justify-center text-sm shrink-0 font-bold">
-                    {i + 1}
+        {/* Highlight reel */}
+        {e.highlight_reel.length > 0 && (
+          <div className="mb-12">
+            <h2 className="meta mb-5" style={{ fontSize: '11px', letterSpacing: '0.15em' }}>Highlight Reel</h2>
+            <div className="space-y-4">
+              {e.highlight_reel.map((h, i) => (
+                <div key={i} className="py-4 border-t" style={{ borderColor: 'var(--color-fog)' }}>
+                  <div className="flex items-baseline gap-3 mb-2">
+                    <span className="meta" style={{ fontSize: '9px', letterSpacing: '0.12em' }}>{h.label}</span>
                   </div>
-                  <div>
-                    <p className="text-white text-sm font-medium mb-1">{item.label}</p>
-                    <p className="text-gray-400 text-xs leading-relaxed">{item.coach_note}</p>
-                  </div>
+                  <p className="font-body text-[12px] leading-relaxed" style={{ color: 'var(--color-ash)' }}>{h.coach_note}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Vocabulary Log */}
-        {evaluation.vocabulary_log && evaluation.vocabulary_log.length > 0 && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-8">
-            <h2 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
-              <span>📝</span>
-              Vocabulary Analysis
-            </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left pb-3 text-gray-400 font-medium">Word</th>
-                    <th className="text-left pb-3 text-gray-400 font-medium">Usage</th>
-                    <th className="text-left pb-3 text-gray-400 font-medium">Context</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-800">
-                  {evaluation.vocabulary_log.map((entry, i) => (
-                    <tr key={i}>
-                      <td className="py-3 text-white font-mono font-medium">{entry.word}</td>
-                      <td className="py-3">
-                        <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${
-                          entry.used_correctly
-                            ? 'bg-green-500/20 text-green-400'
-                            : 'bg-red-500/20 text-red-400'
-                        }`}>
-                          {entry.used_correctly ? 'Correct' : 'Review'}
-                        </span>
-                      </td>
-                      <td className="py-3 text-gray-400 text-xs max-w-xs truncate">{entry.context}</td>
-                    </tr>
+        {/* Vocab log */}
+        {e.vocabulary_log.length > 0 && (
+          <div className="mb-12">
+            <h2 className="meta mb-5" style={{ fontSize: '11px', letterSpacing: '0.15em' }}>Vocabulary</h2>
+            <div className="grid grid-cols-2 gap-px" style={{ backgroundColor: 'var(--color-fog)' }}>
+              <div className="p-5" style={{ backgroundColor: 'var(--color-surface)' }}>
+                <h4 className="meta mb-3" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Words You Used</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {vocabUsed.map((w, i) => (
+                    <span key={i} className="meta px-2 py-1 border" style={{ fontSize: '10px', borderColor: 'var(--color-fog)' }}>{w.toUpperCase()}</span>
                   ))}
-                </tbody>
-              </table>
+                  {vocabUsed.length === 0 && <p className="font-body text-[12px]" style={{ color: 'var(--color-ash)' }}>No notable vocabulary</p>}
+                </div>
+              </div>
+              <div className="p-5" style={{ backgroundColor: 'var(--color-surface)' }}>
+                <h4 className="meta mb-1" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Try These Next Time</h4>
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {vocabAvailable.map((w, i) => (
+                    <span key={i} className="meta px-2 py-1 border" style={{ fontSize: '10px', borderColor: 'var(--color-ink)', color: 'var(--color-ink)' }}>{w.toUpperCase()}</span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Link
-            to="/topics"
-            className="flex-1 py-3 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-semibold text-center transition-colors"
-          >
-            Try Another Topic
-          </Link>
-          <button
-            onClick={handleTryAgain}
-            disabled={retrying}
-            className="flex-1 py-3 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-white rounded-xl font-semibold transition-colors"
-          >
-            {retrying ? 'Starting...' : 'Try Again'}
-          </button>
-          <Link
-            to="/dashboard"
-            className="flex-1 py-3 bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 rounded-xl font-semibold text-center transition-colors"
-          >
-            Dashboard
-          </Link>
-        </div>
-      </main>
-    </div>
-  );
-}
-
-function DimensionCard({
-  title,
-  icon,
-  score,
-  color,
-  metrics,
-}: {
-  title: string;
-  icon: string;
-  score: number;
-  color: string;
-  metrics: Array<{ label: string; value: number }>;
-}) {
-  const pct = Math.round(score * 100);
-
-  return (
-    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">{icon}</span>
-          <h3 className="text-white font-semibold">{title}</h3>
-        </div>
-        <span className="text-xl font-bold tabular-nums" style={{ color }}>
-          {pct}%
-        </span>
-      </div>
-
-      {/* Score bar */}
-      <div className="w-full h-2 bg-gray-700 rounded-full mb-4 overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, backgroundColor: color }}
-        />
-      </div>
-
-      <div className="space-y-2.5">
-        {metrics.map((metric) => (
-          <div key={metric.label}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-gray-400">{metric.label}</span>
-              <span className="text-xs text-gray-300 font-medium tabular-nums">
-                {Math.round((metric.value || 0) * 100)}%
-              </span>
-            </div>
-            <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${Math.round((metric.value || 0) * 100)}%`,
-                  backgroundColor: color,
-                  opacity: 0.7,
-                }}
-              />
-            </div>
+        {/* CTA */}
+        <div className="text-center py-8 border-t" style={{ borderColor: 'var(--color-fog)' }}>
+          <p className="font-display text-[22px] italic mb-6" style={{ color: 'var(--color-ink)' }}>Ready for more?</p>
+          <div className="flex items-center justify-center gap-8">
+            <button onClick={() => navigate(-1)} className="font-body text-[13px] underline underline-offset-4" style={{ color: 'var(--color-ash)' }}>
+              Retry
+            </button>
+            <Link to="/topics" className="font-body text-[13px] uppercase tracking-[0.1em] px-8 py-3 transition-opacity hover:opacity-85"
+              style={{ backgroundColor: 'var(--color-ink)', color: 'white' }}>
+              Explore More
+            </Link>
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );
