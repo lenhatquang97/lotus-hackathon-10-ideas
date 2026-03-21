@@ -157,7 +157,27 @@ async def get_evaluation(
 
 
 @router.websocket("/ws/session/{session_id}")
-async def session_websocket(websocket: WebSocket, session_id: str):
+async def session_websocket(
+    websocket: WebSocket,
+    session_id: str,
+    token: str = Query(default=None),
+):
+    from app.core.security import verify_token
+    from app.db.repositories import user_repo as u_repo
+
+    # Validate token before accepting — browsers can't send custom WS headers
+    if not token:
+        await websocket.close(code=4001)
+        return
+    payload = verify_token(token)
+    if not payload:
+        await websocket.close(code=4001)
+        return
+    user = await u_repo.get_user_by_id(payload.get("sub"))
+    if not user:
+        await websocket.close(code=4001)
+        return
+
     await websocket.accept()
     orchestrator = ConversationOrchestrator(session_id, websocket)
     try:
@@ -176,3 +196,7 @@ async def session_websocket(websocket: WebSocket, session_id: str):
     except Exception as e:
         print(f"WebSocket error: {e}")
         await orchestrator.cleanup()
+        try:
+            await websocket.close(code=1011)
+        except Exception:
+            pass

@@ -48,4 +48,10 @@ export const sessionsApi = {
     api.get('/api/v1/sessions/history', { params }),
 };
 
+// Generation
+export const generateApi = {
+  generateWorld: (data: { brief: string; difficulty: string; knowledge_items?: string[] }) =>
+    api.post('/api/v1/generate-world', data),
+};
+
 export default api;

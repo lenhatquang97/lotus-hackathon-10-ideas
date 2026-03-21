@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { topicsApi } from '../services/api';
+import { topicsApi, generateApi } from '../services/api';
 import { Navbar } from '../components/Navbar';
 import { useDebounce } from '../hooks/useDebounce';
 import { analyzeBrief } from '../lib/brief-analyzer';
@@ -46,36 +46,45 @@ export default function TopicCreatorPage() {
     setError('');
 
     try {
-      // Build a description from brief + knowledge
-      let fullBrief = brief;
-      const textItems = knowledgeItems.filter((i) => i.content);
-      if (textItems.length > 0) {
-        fullBrief += '\n\nAdditional context:\n' + textItems.map((i) => `- ${i.content}`).join('\n');
-      }
+      const knowledgeTexts = knowledgeItems
+        .filter((i) => i.content)
+        .map((i) => i.content);
 
-      // Extract meaningful data from the brief for the draft
-      const firstSentence = brief.split(/[.!?\n]/)[0].trim();
-      const title = firstSentence.length > 60 ? firstSentence.slice(0, 60) + '...' : firstSentence || 'Untitled World';
+      const res = await generateApi.generateWorld({
+        brief,
+        difficulty,
+        knowledge_items: knowledgeTexts.length > 0 ? knowledgeTexts : undefined,
+      });
 
-      // Generate characters from the brief
-      const characters: Character[] = [
-        { id: 'char-1', name: 'Character 1', role: 'Primary', persona: 'Define the personality and communication style of this character.', bias_perception: '', voice_id: 'default', avatar_preset: 'default' },
-        { id: 'char-2', name: 'Character 2', role: 'Secondary', persona: 'Define the personality and communication style of this character.', bias_perception: '', voice_id: 'default', avatar_preset: 'default' },
-      ];
+      const generated = res.data;
+
+      // Map AI-generated characters to our Character type
+      const characters: Character[] = (generated.characters || []).map((c: any, i: number) => ({
+        id: `gen-${i}`,
+        name: c.name || `Character ${i + 1}`,
+        role: c.role || 'Anchor',
+        persona: c.persona || '',
+        bias_perception: c.bias_perception || '',
+        voice_id: 'default',
+        avatar_preset: 'default',
+      }));
 
       const draft: WorldDraft = {
-        title,
-        description: brief.slice(0, 200),
-        domain_knowledge: fullBrief,
-        difficulty_levels: [DIFFICULTY_MAP[difficulty]],
-        tags: preview.detectedTopics.slice(0, 3),
-        characters,
+        title: generated.title || 'Untitled World',
+        description: generated.description || brief.slice(0, 200),
+        domain_knowledge: generated.domain_knowledge || brief,
+        difficulty_levels: generated.difficulty_levels || [DIFFICULTY_MAP[difficulty]],
+        tags: generated.tags || preview.detectedTopics.slice(0, 3),
+        characters: characters.length > 0 ? characters : [
+          { id: 'char-1', name: 'Character 1', role: 'Anchor', persona: '', bias_perception: '', voice_id: 'default', avatar_preset: 'default' },
+        ],
       };
 
       setGeneratedDraft(draft);
       setShowModal(true);
-    } catch {
-      setError('Failed to generate world. Please try again.');
+    } catch (e: any) {
+      const detail = e.response?.data?.detail;
+      setError(detail || 'Failed to generate world. Please try again.');
     } finally {
       setGenerating(false);
     }

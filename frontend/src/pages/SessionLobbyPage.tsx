@@ -46,10 +46,10 @@ export default function SessionLobbyPage() {
       <div className="w-full max-w-[560px]">
         {/* Meta */}
         <div className="flex items-center gap-4 mb-5">
-          {topic.tags.map(t => (
+          {(topic.tags || []).map(t => (
             <span key={t} className="meta" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>{t.toUpperCase()}</span>
           ))}
-          {topic.difficulty_levels.map(l => (
+          {(topic.difficulty_levels || []).map(l => (
             <span key={l} className="meta ml-auto px-2 py-0.5 border" style={{ fontSize: '10px', borderColor: 'var(--color-border)' }}>{l}</span>
           ))}
         </div>
@@ -66,7 +66,7 @@ export default function SessionLobbyPage() {
 
         {/* Agent list */}
         <div className="mb-7 space-y-px" style={{ backgroundColor: 'var(--color-border)' }}>
-          {topic.characters.map(char => (
+          {(topic.characters || []).map(char => (
             <div key={char.id} className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: 'var(--color-surface)' }}>
               <div className="w-9 h-9 flex items-center justify-center flex-shrink-0"
                 style={{ backgroundColor: 'var(--color-border)', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-secondary)' }}>
