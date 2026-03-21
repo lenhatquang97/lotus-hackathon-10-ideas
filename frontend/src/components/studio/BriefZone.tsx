@@ -46,9 +46,9 @@ export function BriefZone({ value, onChange, difficulty, onDifficultyChange, onT
   return (
     <div style={{ background: 'var(--color-surface)' }}>
       {/* Zone label */}
-      <div className="flex items-baseline gap-3 mb-6 pb-3 border-b" style={{ borderColor: 'var(--color-fog)' }}>
-        <span className="font-ui text-[10px] tracking-widest uppercase" style={{ color: 'var(--color-ash)' }}>World Brief</span>
-        <span className="font-body text-xs" style={{ color: 'var(--color-ash)' }}>Natural language</span>
+      <div className="flex items-baseline gap-3 mb-6 pb-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
+        <span className="font-ui text-[10px] tracking-widest uppercase" style={{ color: 'var(--color-text-secondary)' }}>World Brief</span>
+        <span className="font-body text-xs" style={{ color: 'var(--color-text-secondary)' }}>Natural language</span>
       </div>
 
       {/* Quick templates */}
@@ -56,10 +56,10 @@ export function BriefZone({ value, onChange, difficulty, onDifficultyChange, onT
         {QUICK_TEMPLATES.map((t) => (
           <button key={t.label}
             className="font-ui text-[9px] tracking-widest uppercase bg-transparent border py-1 px-2.5 cursor-pointer transition-all duration-200 whitespace-nowrap"
-            style={{ color: 'var(--color-ash)', borderColor: 'var(--color-fog)', borderRadius: '2px' }}
+            style={{ color: 'var(--color-text-secondary)', borderColor: 'var(--color-border)', borderRadius: '2px' }}
             onClick={() => { handleTemplate(t.text); onTemplateSelect?.(t.label); }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-ink)'; e.currentTarget.style.color = 'var(--color-ink)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-fog)'; e.currentTarget.style.color = 'var(--color-ash)'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-accent-border)'; e.currentTarget.style.color = 'var(--color-text-primary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
           >{t.label}</button>
         ))}
       </div>
@@ -68,22 +68,22 @@ export function BriefZone({ value, onChange, difficulty, onDifficultyChange, onT
       <div className="relative flex-1">
         <textarea
           className="w-full font-body text-base leading-relaxed bg-transparent border-0 border-b p-0 pb-4 resize-none outline-none transition-colors duration-200"
-          style={{ color: 'var(--color-ink)', borderColor: 'var(--color-fog)', minHeight: '320px' }}
+          style={{ color: 'var(--color-text-primary)', borderColor: 'var(--color-border)', minHeight: '320px' }}
           placeholder={PLACEHOLDER}
           value={value} onChange={handleChange} maxLength={2000}
-          onFocus={(e) => (e.target.style.borderColor = 'var(--color-ash)')}
-          onBlur={(e) => (e.target.style.borderColor = 'var(--color-fog)')}
+          onFocus={(e) => (e.target.style.borderColor = 'var(--color-text-secondary)')}
+          onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
         />
         {charCount > 0 && (
-          <span className="absolute bottom-5 right-0 font-ui text-[10px] tracking-wide" style={{ color: 'var(--color-ash)' }}>
+          <span className="absolute bottom-5 right-0 font-ui text-[10px] tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
             {charCount} / 2000
           </span>
         )}
       </div>
 
       {/* Difficulty */}
-      <div className="flex items-center gap-5 mt-6 pt-4 border-t" style={{ borderColor: 'var(--color-fog)' }}>
-        <span className="font-ui text-[10px] tracking-widest uppercase shrink-0" style={{ color: 'var(--color-ash)' }}>Difficulty</span>
+      <div className="flex items-center gap-5 mt-6 pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+        <span className="font-ui text-[10px] tracking-widest uppercase shrink-0" style={{ color: 'var(--color-text-secondary)' }}>Difficulty</span>
         <DifficultySelector value={difficulty} onChange={onDifficultyChange} />
       </div>
     </div>

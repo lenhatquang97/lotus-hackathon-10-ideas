@@ -15,23 +15,23 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-paper)' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg)' }}>
       <Navbar />
       <div className="max-w-[900px] mx-auto px-12 py-16">
         {/* Welcome */}
         <div className="mb-14">
           <p className="meta mb-2" style={{ fontSize: '11px' }}>Welcome back</p>
-          <h1 className="font-display text-[56px] italic" style={{ color: 'var(--color-ink)' }}>
+          <h1 className="font-display text-[56px] italic" style={{ color: 'var(--color-text-primary)' }}>
             {user?.profile.display_name}
           </h1>
         </div>
 
         {/* Quick actions */}
-        <div className="grid gap-px mb-12 grid-cols-1 max-w-sm" style={{ backgroundColor: 'var(--color-fog)' }}>
-          <Link to="/topics" className="block p-8 transition-all hover:bg-ink group" style={{ backgroundColor: 'var(--color-surface)' }}>
-            <span className="meta block mb-4 group-hover:text-white/60" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>01</span>
-            <h3 className="font-display text-[22px] font-semibold mb-2 group-hover:text-white" style={{ color: 'var(--color-ink)' }}>Explore Worlds</h3>
-            <p className="font-body text-[13px] group-hover:text-white/70" style={{ color: 'var(--color-ash)' }}>Browse, create, and join conversation scenarios</p>
+        <div className="grid gap-px mb-12 grid-cols-1 max-w-sm" style={{ backgroundColor: 'var(--color-border)' }}>
+          <Link to="/topics" className="block p-8 transition-all group" style={{ backgroundColor: 'var(--color-surface)' }}>
+            <span className="meta block mb-4" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>01</span>
+            <h3 className="font-display text-[22px] font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>Explore Worlds</h3>
+            <p className="font-body text-[13px]" style={{ color: 'var(--color-text-secondary)' }}>Browse, create, and join conversation scenarios</p>
           </Link>
         </div>
 
@@ -41,16 +41,16 @@ export default function DashboardPage() {
           {loading ? (
             <p className="meta" style={{ fontSize: '11px' }}>Loading...</p>
           ) : sessions.length === 0 ? (
-            <div className="py-10 text-center border" style={{ borderColor: 'var(--color-fog)' }}>
-              <p className="font-display text-xl italic mb-2" style={{ color: 'var(--color-ink)' }}>No sessions yet</p>
-              <Link to="/topics" className="font-body text-[13px] underline underline-offset-4" style={{ color: 'var(--color-ash)' }}>Start your first session</Link>
+            <div className="py-10 text-center border" style={{ borderColor: 'var(--color-border)' }}>
+              <p className="font-display text-xl italic mb-2" style={{ color: 'var(--color-text-primary)' }}>No sessions yet</p>
+              <Link to="/topics" className="font-body text-[13px] underline underline-offset-4" style={{ color: 'var(--color-text-secondary)' }}>Start your first session</Link>
             </div>
           ) : (
-            <div className="space-y-px" style={{ backgroundColor: 'var(--color-fog)' }}>
+            <div className="space-y-px" style={{ backgroundColor: 'var(--color-border)' }}>
               {sessions.map(s => (
                 <div key={s.id} className="flex items-center justify-between px-5 py-4" style={{ backgroundColor: 'var(--color-surface)' }}>
                   <div>
-                    <p className="font-body text-[14px] mb-1" style={{ color: 'var(--color-ink)' }}>
+                    <p className="font-body text-[14px] mb-1" style={{ color: 'var(--color-text-primary)' }}>
                       {s.status === 'completed' ? 'Completed session' : `Session (${s.status})`}
                     </p>
                     <p className="meta" style={{ fontSize: '10px' }}>
@@ -59,7 +59,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex items-center gap-4">
                     {s.evaluation && (
-                      <span className="font-display text-[24px]" style={{ color: 'var(--color-ink)' }}>
+                      <span className="font-display text-[24px]" style={{ color: 'var(--color-text-primary)' }}>
                         {Math.round(s.evaluation.composite_score * 100)}
                       </span>
                     )}

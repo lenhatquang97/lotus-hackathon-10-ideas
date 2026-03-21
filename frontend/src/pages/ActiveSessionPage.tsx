@@ -63,7 +63,7 @@ function TranscriptPanel({ transcript }: { transcript: TranscriptTurn[] }) {
               {entry.speaker === 'learner' ? 'YOU' : (entry.character_name?.toUpperCase() || 'AGENT')}
             </span>
             <div className="max-w-[85%] px-3 py-2 font-body text-[13px] leading-relaxed"
-              style={{ backgroundColor: entry.speaker === 'learner' ? 'var(--color-ink)' : 'var(--color-paper)', color: entry.speaker === 'learner' ? 'white' : 'var(--color-ink)' }}>
+              style={{ backgroundColor: entry.speaker === 'learner' ? 'var(--color-accent)' : 'var(--color-bg)', color: entry.speaker === 'learner' ? '#0D0B14' : 'var(--color-text-primary)' }}>
               {entry.text}
             </div>
           </div>
@@ -134,7 +134,7 @@ export default function ActiveSessionPage() {
   const activeChar = characters[activeCharIdx];
 
   if (ending) return (
-    <div className="h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--color-ink)' }}>
+    <div className="h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--color-bg)' }}>
       <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mb-4" />
       <p className="font-display italic text-white text-lg">Analysing your conversation...</p>
       <p className="meta mt-2" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>Your coach is reviewing your performance</p>
@@ -186,7 +186,7 @@ export default function ActiveSessionPage() {
         <div className="absolute bottom-4 right-4 z-10">
           <button onClick={handleEnd}
             className="px-4 py-2 font-body text-[13px] transition-opacity"
-            style={{ backgroundColor: 'rgba(255,255,255,0.9)', color: 'var(--color-ink)', backdropFilter: 'blur(4px)' }}>
+            style={{ backgroundColor: 'rgba(255,255,255,0.9)', color: 'var(--color-text-primary)', backdropFilter: 'blur(4px)' }}>
             End Session
           </button>
         </div>
@@ -194,8 +194,8 @@ export default function ActiveSessionPage() {
         {/* Silence overlay */}
         {store.showSilenceOverlay && (
           <div className="absolute inset-0 flex items-center justify-center z-20" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-            <div className="text-center p-10" style={{ backgroundColor: 'var(--color-paper)' }}>
-              <p className="font-display text-[28px] italic mb-2" style={{ color: 'var(--color-ink)' }}>Your turn to speak</p>
+            <div className="text-center p-10" style={{ backgroundColor: 'var(--color-bg)' }}>
+              <p className="font-display text-[28px] italic mb-2" style={{ color: 'var(--color-text-primary)' }}>Your turn to speak</p>
               <p className="meta" style={{ fontSize: '11px' }}>Press the mic button and share your thoughts</p>
             </div>
           </div>

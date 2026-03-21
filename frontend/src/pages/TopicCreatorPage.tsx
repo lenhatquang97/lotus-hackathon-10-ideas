@@ -110,21 +110,21 @@ export default function TopicCreatorPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-paper)' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg)' }}>
       <Navbar />
 
       {/* Page header */}
-      <div className="max-w-[1120px] mx-auto w-full px-12 pt-12 pb-9 border-b" style={{ borderColor: 'var(--color-fog)' }}>
+      <div className="max-w-[1120px] mx-auto w-full px-12 pt-12 pb-9 border-b" style={{ borderColor: 'var(--color-border)' }}>
         <Link to="/studio" className="font-ui text-[11px] tracking-widest uppercase block mb-5 no-underline transition-colors duration-200"
-          style={{ color: 'var(--color-ash)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-ink)')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-ash)')}>
+          style={{ color: 'var(--color-text-secondary)' }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-text-primary)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-text-secondary)')}>
           &larr; Studio
         </Link>
-        <h1 className="font-display font-light text-5xl leading-none mb-2" style={{ color: 'var(--color-ink)' }}>
+        <h1 className="font-display font-light text-5xl leading-none mb-2" style={{ color: 'var(--color-text-primary)' }}>
           Create World
         </h1>
-        <p className="font-body text-sm" style={{ color: 'var(--color-ash)' }}>
+        <p className="font-body text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           Drop materials, describe your scenario, generate.
         </p>
       </div>
@@ -133,9 +133,9 @@ export default function TopicCreatorPage() {
       <div className="max-w-[1120px] mx-auto w-full px-12 py-12 flex-1 flex flex-col">
         {/* 3-column grid */}
         <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] lg:grid-cols-[280px_1fr_300px] gap-px border min-h-[520px]"
-          style={{ backgroundColor: 'var(--color-fog)', borderColor: 'var(--color-fog)', borderRadius: '2px' }}>
+          style={{ backgroundColor: 'var(--color-border)', borderColor: 'var(--color-border)', borderRadius: '2px' }}>
           {/* Knowledge — left */}
-          <div className="p-8 order-2 md:order-none" style={{ backgroundColor: 'var(--color-paper)' }}>
+          <div className="p-8 order-2 md:order-none" style={{ backgroundColor: 'var(--color-bg)' }}>
             <KnowledgeZone items={knowledgeItems} onAdd={(item) => setKnowledgeItems(prev => [...prev, item])} onRemove={(id) => setKnowledgeItems(prev => prev.filter(i => i.id !== id))} />
           </div>
 
@@ -145,13 +145,13 @@ export default function TopicCreatorPage() {
           </div>
 
           {/* Preview — right */}
-          <div className="p-8 order-3 md:order-none md:row-span-2 lg:row-span-1" style={{ backgroundColor: 'rgba(10,10,10,0.025)' }}>
+          <div className="p-8 order-3 md:order-none md:row-span-2 lg:row-span-1" style={{ backgroundColor: 'rgba(13, 11, 20, 0.025)' }}>
             <LivePreviewZone preview={preview} brief={brief} activeTemplate={activeTemplate} />
           </div>
         </div>
 
         {/* Error */}
-        {error && <p className="font-body text-sm mt-4" style={{ color: 'var(--color-ink)' }}>{error}</p>}
+        {error && <p className="font-body text-sm mt-4" style={{ color: 'var(--color-text-primary)' }}>{error}</p>}
 
         {/* Generate bar */}
         <GenerateBar canGenerate={canGenerate} isGenerating={generating} onGenerate={handleGenerate} />

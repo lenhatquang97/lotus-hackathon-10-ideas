@@ -29,14 +29,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ backgroundColor: 'var(--color-paper)' }}>
+    <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ backgroundColor: 'var(--color-bg)' }}>
       <div className="w-full max-w-[400px]">
         <div className="text-center mb-10">
-          <Link to="/" className="font-display italic text-2xl" style={{ color: 'var(--color-ink)' }}>Lotus</Link>
+          <Link to="/" className="font-display italic text-2xl" style={{ color: 'var(--color-text-primary)' }}>Lotus</Link>
           <p className="meta mt-3" style={{ fontSize: '11px' }}>Sign in to your account</p>
         </div>
 
-        <div className="border p-8" style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-surface)' }}>
+        <div className="border p-8" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)' }}>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="meta block mb-2" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Email</label>
@@ -45,7 +45,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full px-3 py-2.5 border font-body text-[14px] outline-none transition-colors"
-                style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-paper)', color: 'var(--color-ink)' }}
+                style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg)', color: 'var(--color-text-primary)' }}
                 placeholder="you@example.com"
                 required
               />
@@ -57,7 +57,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 className="w-full px-3 py-2.5 border font-body text-[14px] outline-none transition-colors"
-                style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-paper)', color: 'var(--color-ink)' }}
+                style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg)', color: 'var(--color-text-primary)' }}
                 placeholder="••••••••"
                 required
               />
@@ -67,16 +67,16 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="w-full py-3 font-body text-[13px] uppercase tracking-[0.1em] transition-opacity disabled:opacity-40"
-              style={{ backgroundColor: 'var(--color-ink)', color: 'white' }}
+              style={{ backgroundColor: 'var(--color-accent)', color: '#0D0B14' }}
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
         </div>
 
-        <p className="text-center mt-6 font-body text-[13px]" style={{ color: 'var(--color-ash)' }}>
+        <p className="text-center mt-6 font-body text-[13px]" style={{ color: 'var(--color-text-secondary)' }}>
           Don't have an account?{' '}
-          <Link to="/auth/register" className="underline underline-offset-4" style={{ color: 'var(--color-ink)' }}>
+          <Link to="/auth/register" className="underline underline-offset-4" style={{ color: 'var(--color-accent)' }}>
             Register
           </Link>
         </p>

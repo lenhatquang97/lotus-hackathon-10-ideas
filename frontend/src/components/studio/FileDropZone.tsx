@@ -23,7 +23,7 @@ export function FileDropZone({ onDrop }: FileDropZoneProps) {
           : 'hover:bg-gray-50'
       }`}
       style={{
-        borderColor: isDragging ? 'var(--color-ink)' : 'var(--color-fog)',
+        borderColor: isDragging ? 'var(--color-accent-border)' : 'var(--color-border)',
         borderRadius: '2px',
       }}
       onDragOver={(e) => e.preventDefault()}
@@ -43,14 +43,14 @@ export function FileDropZone({ onDrop }: FileDropZoneProps) {
           e.target.value = '';
         }}
       />
-      <svg width="20" height="24" viewBox="0 0 20 24" fill="none" className="mx-auto mb-3" style={{ color: isDragging ? 'var(--color-ash)' : 'var(--color-fog)' }}>
+      <svg width="20" height="24" viewBox="0 0 20 24" fill="none" className="mx-auto mb-3" style={{ color: isDragging ? 'var(--color-text-secondary)' : 'var(--color-border)' }}>
         <path d="M3 1h10l6 6v16H3V1z" stroke="currentColor" strokeWidth="1" />
         <path d="M13 1v6h6" stroke="currentColor" strokeWidth="1" />
         <line x1="6" y1="12" x2="14" y2="12" stroke="currentColor" strokeWidth="1" />
         <line x1="6" y1="16" x2="14" y2="16" stroke="currentColor" strokeWidth="1" />
       </svg>
-      <p className="font-body text-sm mb-1" style={{ color: 'var(--color-ash)' }}>Drop files here</p>
-      <p className="font-ui text-[10px] uppercase tracking-wider" style={{ color: 'var(--color-ash)' }}>
+      <p className="font-body text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>Drop files here</p>
+      <p className="font-ui text-[10px] uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>
         PDF, DOCX, TXT — or click to browse
       </p>
     </div>

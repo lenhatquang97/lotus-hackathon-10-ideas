@@ -7,7 +7,7 @@ import { FinalCTA } from '../components/home/FinalCTA';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-paper)' }}>
+    <div className="landing-page">
       <Navbar />
       <HeroSection />
       <ScenarioStrip />

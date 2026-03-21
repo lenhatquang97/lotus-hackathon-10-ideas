@@ -67,19 +67,19 @@ export default function TopicEditorPage() {
   };
 
   if (!loaded) return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-paper)' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg)' }}>
       <Navbar />
       <div className="flex items-center justify-center h-64 meta">Loading...</div>
     </div>
   );
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-paper)' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg)' }}>
       <Navbar />
       <div className="max-w-[800px] mx-auto px-12 py-16">
         <div className="mb-10">
           <Link to="/studio" className="meta hover:underline mb-4 inline-block" style={{ fontSize: '11px' }}>← Studio</Link>
-          <h1 className="font-display text-[48px] italic" style={{ color: 'var(--color-ink)' }}>Edit World</h1>
+          <h1 className="font-display text-[48px] italic" style={{ color: 'var(--color-text-primary)' }}>Edit World</h1>
         </div>
 
         <div className="space-y-8">
@@ -87,19 +87,19 @@ export default function TopicEditorPage() {
             <label className="meta block mb-2" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Title *</label>
             <input value={title} onChange={e => setTitle(e.target.value)}
               className="w-full px-4 py-3 border font-body text-[14px] outline-none"
-              style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-surface)', color: 'var(--color-ink)' }} />
+              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-primary)' }} />
           </div>
           <div>
             <label className="meta block mb-2" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Description</label>
             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
               className="w-full px-4 py-3 border font-body text-[14px] outline-none resize-none"
-              style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-surface)', color: 'var(--color-ink)' }} />
+              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-primary)' }} />
           </div>
           <div>
             <label className="meta block mb-2" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Background Context</label>
             <textarea value={domainKnowledge} onChange={e => setDomainKnowledge(e.target.value)} rows={6}
               className="w-full px-4 py-3 border font-body text-[14px] outline-none resize-none"
-              style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-surface)', color: 'var(--color-ink)' }} />
+              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-primary)' }} />
           </div>
           <div>
             <label className="meta block mb-3" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Difficulty</label>
@@ -107,7 +107,7 @@ export default function TopicEditorPage() {
               {DIFFICULTY_LEVELS.map(l => (
                 <button key={l} type="button" onClick={() => toggleDifficulty(l)}
                   className="meta px-3 py-1.5 border transition-all"
-                  style={{ fontSize: '10px', borderColor: difficultyLevels.includes(l) ? 'var(--color-ink)' : 'var(--color-fog)', backgroundColor: difficultyLevels.includes(l) ? 'var(--color-ink)' : 'transparent', color: difficultyLevels.includes(l) ? 'white' : 'var(--color-ash)' }}>
+                  style={{ fontSize: '10px', borderColor: difficultyLevels.includes(l) ? 'var(--color-accent-border)' : 'var(--color-border)', backgroundColor: difficultyLevels.includes(l) ? 'var(--color-accent)' : 'transparent', color: difficultyLevels.includes(l) ? '#0D0B14' : 'var(--color-text-secondary)' }}>
                   {l}
                 </button>
               ))}
@@ -117,22 +117,22 @@ export default function TopicEditorPage() {
             <label className="meta block mb-2" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Tags (comma-separated)</label>
             <input value={tags} onChange={e => setTags(e.target.value)}
               className="w-full px-4 py-3 border font-body text-[14px] outline-none"
-              style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-surface)', color: 'var(--color-ink)' }} />
+              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-primary)' }} />
           </div>
           <div>
             <div className="flex items-baseline justify-between mb-4">
               <label className="meta" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Characters ({characters.length}/3)</label>
               {characters.length < 3 && (
-                <button type="button" onClick={addChar} className="meta hover:underline" style={{ fontSize: '10px', color: 'var(--color-ink)' }}>+ Add</button>
+                <button type="button" onClick={addChar} className="meta hover:underline" style={{ fontSize: '10px', color: 'var(--color-accent)' }}>+ Add</button>
               )}
             </div>
-            <div className="space-y-px" style={{ backgroundColor: 'var(--color-fog)' }}>
+            <div className="space-y-px" style={{ backgroundColor: 'var(--color-border)' }}>
               {characters.map((char, i) => (
                 <div key={i} className="p-6" style={{ backgroundColor: 'var(--color-surface)' }}>
                   <div className="flex items-center justify-between mb-5">
                     <span className="meta" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Character {i + 1}</span>
                     {characters.length > 1 && (
-                      <button type="button" onClick={() => removeChar(i)} className="meta hover:underline" style={{ fontSize: '10px', color: 'var(--color-ash)' }}>Remove</button>
+                      <button type="button" onClick={() => removeChar(i)} className="meta hover:underline" style={{ fontSize: '10px', color: 'var(--color-text-secondary)' }}>Remove</button>
                     )}
                   </div>
                   <div className="grid grid-cols-2 gap-4 mb-4">
@@ -140,41 +140,41 @@ export default function TopicEditorPage() {
                       <label className="meta block mb-2" style={{ fontSize: '9px', letterSpacing: '0.1em' }}>Name *</label>
                       <input value={char.name} onChange={e => updateChar(i, 'name', e.target.value)}
                         className="w-full px-3 py-2 border font-body text-[13px] outline-none"
-                        style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-paper)', color: 'var(--color-ink)' }} />
+                        style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg)', color: 'var(--color-text-primary)' }} />
                     </div>
                     <div>
                       <label className="meta block mb-2" style={{ fontSize: '9px', letterSpacing: '0.1em' }}>Role *</label>
                       <input value={char.role} onChange={e => updateChar(i, 'role', e.target.value)}
                         className="w-full px-3 py-2 border font-body text-[13px] outline-none"
-                        style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-surface)', color: 'var(--color-ink)' }} />
+                        style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-primary)' }} />
                     </div>
                   </div>
                   <div className="mb-4">
                     <label className="meta block mb-2" style={{ fontSize: '9px', letterSpacing: '0.1em' }}>Persona</label>
                     <textarea value={char.persona} onChange={e => updateChar(i, 'persona', e.target.value)} rows={2}
                       className="w-full px-3 py-2 border font-body text-[13px] outline-none resize-none"
-                      style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-paper)', color: 'var(--color-ink)' }} />
+                      style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg)', color: 'var(--color-text-primary)' }} />
                   </div>
                   <div>
                     <label className="meta block mb-2" style={{ fontSize: '9px', letterSpacing: '0.1em' }}>Bias / Perspective</label>
                     <textarea value={char.bias_perception} onChange={e => updateChar(i, 'bias_perception', e.target.value)} rows={2}
                       className="w-full px-3 py-2 border font-body text-[13px] outline-none resize-none"
-                      style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-paper)', color: 'var(--color-ink)' }} />
+                      style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg)', color: 'var(--color-text-primary)' }} />
                   </div>
                 </div>
               ))}
             </div>
           </div>
           {error && <p className="font-body text-[13px]" style={{ color: '#c44' }}>{error}</p>}
-          <div className="flex items-center gap-4 pt-4 border-t" style={{ borderColor: 'var(--color-fog)' }}>
+          <div className="flex items-center gap-4 pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
             <button onClick={() => save(false)} disabled={saving}
-              className="flex-1 py-3 font-body text-[13px] border transition-all disabled:opacity-40 hover:bg-ink hover:text-white hover:border-ink"
-              style={{ borderColor: 'var(--color-ink)', color: 'var(--color-ink)' }}>
+              className="flex-1 py-3 font-body text-[13px] border transition-all disabled:opacity-40"
+              style={{ borderColor: 'var(--color-accent)', color: 'var(--color-accent)' }}>
               {saving ? 'Saving...' : 'Save Draft'}
             </button>
             <button onClick={() => save(true)} disabled={saving}
               className="flex-1 py-3 font-body text-[13px] uppercase tracking-[0.1em] transition-opacity disabled:opacity-40"
-              style={{ backgroundColor: 'var(--color-ink)', color: 'white' }}>
+              style={{ backgroundColor: 'var(--color-accent)', color: '#0D0B14' }}>
               {saving ? 'Publishing...' : 'Save & Publish'}
             </button>
           </div>

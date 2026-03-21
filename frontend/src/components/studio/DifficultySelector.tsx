@@ -15,8 +15,8 @@ export function DifficultySelector({ value, onChange }: DifficultySelectorProps)
           key={opt}
           className="font-ui text-[10px] tracking-widest uppercase px-3 py-1 bg-transparent border-none cursor-pointer transition-all duration-200"
           style={{
-            color: value === opt ? 'var(--color-ink)' : 'var(--color-ash)',
-            borderBottom: value === opt ? '2px solid var(--color-ink)' : '2px solid transparent',
+            color: value === opt ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+            borderBottom: value === opt ? '2px solid var(--color-accent)' : '2px solid transparent',
             paddingBottom: value === opt ? '3px' : '5px',
           }}
           onClick={() => onChange(opt)}
