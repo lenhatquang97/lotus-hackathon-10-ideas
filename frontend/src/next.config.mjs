@@ -1,3 +1,6 @@
+import { config } from "dotenv";
+config({ path: "../.env" });
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@met4citizen/talkinghead"],

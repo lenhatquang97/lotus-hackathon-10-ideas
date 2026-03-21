@@ -2,9 +2,9 @@
 
 import pytest
 from unittest.mock import AsyncMock
-from src.backend.content_loader import ContentLoader
-from src.backend.context_manager import ContextManager, SLIDING_WINDOW_SIZE
-from src.backend.models import SessionState, Turn
+from backend.src.content_loader import ContentLoader
+from backend.src.context_manager import ContextManager, SLIDING_WINDOW_SIZE
+from backend.src.models import SessionState, Turn
 
 
 @pytest.fixture

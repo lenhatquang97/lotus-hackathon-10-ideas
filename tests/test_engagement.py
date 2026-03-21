@@ -1,13 +1,13 @@
 """Tests for the engagement engine."""
 
 import pytest
-from src.backend.content_loader import ContentLoader
-from src.backend.engagement import (
+from backend.src.content_loader import ContentLoader
+from backend.src.engagement import (
     generate_engagement_schedule,
     should_trigger_engagement,
     select_engagement_question,
 )
-from src.backend.models import SessionState
+from backend.src.models import SessionState
 
 
 @pytest.fixture

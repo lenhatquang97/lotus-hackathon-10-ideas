@@ -1,9 +1,9 @@
 """Tests for the director module."""
 
 import pytest
-from src.backend.director import decide_responder
-from src.backend.content_loader import ContentLoader
-from src.backend.models import SessionState
+from backend.src.director import decide_responder
+from backend.src.content_loader import ContentLoader
+from backend.src.models import SessionState
 
 
 @pytest.fixture

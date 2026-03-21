@@ -5,6 +5,8 @@ import json
 import logging
 import os
 
+from pathlib import Path
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,7 +15,7 @@ from .content_loader import ContentLoader
 from .director import Director
 from .llm_client import LLMClient
 
-load_dotenv()
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 logging.basicConfig(
     level=getattr(logging, os.getenv("LOG_LEVEL", "INFO")),
@@ -186,4 +188,4 @@ if __name__ == "__main__":
 
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))
-    uvicorn.run("src.backend.main:app", host=host, port=port, reload=True)
+    uvicorn.run("backend.src.main:app", host=host, port=port, reload=True)

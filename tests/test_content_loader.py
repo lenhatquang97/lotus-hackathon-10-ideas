@@ -1,7 +1,7 @@
 """Tests for content loading and validation."""
 
 import pytest
-from src.backend.content_loader import ContentLoader
+from backend.src.content_loader import ContentLoader
 
 
 @pytest.fixture

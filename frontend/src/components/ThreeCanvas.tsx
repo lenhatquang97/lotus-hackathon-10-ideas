@@ -45,7 +45,7 @@ export default function ThreeCanvas({ onReady, onError }: ThreeCanvasProps) {
       className="w-full h-full"
       style={{
         minHeight: "400px",
-        backgroundImage: "url('/room_1.png')",
+        backgroundImage: "url('/cool_office.png')",
         backgroundSize: "contain",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
