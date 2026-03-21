@@ -100,7 +100,7 @@ export default function TopicCreatorPage() {
 
       if (publish) {
         await topicsApi.publish(res.data.id);
-        navigate('/topics');
+        navigate(`/topics/${res.data.id}`);
       } else {
         navigate('/studio');
       }

@@ -12,7 +12,7 @@ export default function TopicDetailPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (topicId) topicsApi.get(topicId).then(r => setTopic(r.data)).finally(() => setLoading(false));
+    if (topicId) topicsApi.get(topicId).then(r => setTopic(r.data)).catch(() => {}).finally(() => setLoading(false));
   }, [topicId]);
 
   const handleStart = async () => {
@@ -46,11 +46,11 @@ export default function TopicDetailPage() {
       <div className="max-w-[800px] mx-auto px-12 py-16">
         {/* Meta */}
         <div className="flex items-center gap-4 mb-6">
-          {topic.tags.map(t => (
+          {(topic.tags || []).map(t => (
             <span key={t} className="meta" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>{t.toUpperCase()}</span>
           ))}
           <span className="meta" style={{ fontSize: '10px' }}>·</span>
-          {topic.difficulty_levels.map(l => (
+          {(topic.difficulty_levels || []).map(l => (
             <span key={l} className="meta px-2 py-0.5 border" style={{ fontSize: '10px', borderColor: 'var(--color-border)' }}>{l}</span>
           ))}
         </div>
@@ -74,10 +74,10 @@ export default function TopicDetailPage() {
         {/* Characters */}
         <div className="mb-10">
           <span className="meta block mb-5" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>
-            {topic.characters.length} {topic.characters.length === 1 ? 'Character' : 'Characters'}
+            {(topic.characters || []).length} {(topic.characters || []).length === 1 ? 'Character' : 'Characters'}
           </span>
           <div className="space-y-px" style={{ backgroundColor: 'var(--color-border)' }}>
-            {topic.characters.map(char => (
+            {(topic.characters || []).map(char => (
               <div key={char.id} className="flex gap-4 p-5" style={{ backgroundColor: 'var(--color-surface)' }}>
                 <div
                   className="flex-shrink-0 w-9 h-9 flex items-center justify-center"

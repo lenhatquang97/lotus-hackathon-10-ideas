@@ -32,10 +32,10 @@ function TopicCard({ topic, onJoin }: { topic: Topic; onJoin: () => void }) {
     >
       <div className="flex items-baseline justify-between">
         <span className="meta" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>
-          {topic.tags[0] || 'General'}
+          {(topic.tags || [])[0] || 'General'}
         </span>
         <span className="meta" style={{ fontSize: '10px' }}>
-          {topic.characters.length} {topic.characters.length === 1 ? 'CHARACTER' : 'CHARACTERS'}
+          {(topic.characters || []).length} {(topic.characters || []).length === 1 ? 'CHARACTER' : 'CHARACTERS'}
         </span>
       </div>
 
@@ -53,7 +53,7 @@ function TopicCard({ topic, onJoin }: { topic: Topic; onJoin: () => void }) {
         <span className="meta transition-colors" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>
           {topic.play_count} plays
         </span>
-        {topic.difficulty_levels.map(l => (
+        {(topic.difficulty_levels || []).map(l => (
           <span key={l} className="meta ml-auto px-2 py-0.5 border transition-colors" style={{ fontSize: '10px', borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}>
             {l}
           </span>
@@ -76,8 +76,8 @@ export default function TopicCatalogPage() {
   }, []);
 
   const filtered = topics.filter(t => {
-    if (tagFilter !== 'All' && !t.tags.includes(tagFilter)) return false;
-    if (difficultyFilter !== 'All' && !t.difficulty_levels.includes(difficultyFilter)) return false;
+    if (tagFilter !== 'All' && !(t.tags || []).includes(tagFilter)) return false;
+    if (difficultyFilter !== 'All' && !(t.difficulty_levels || []).includes(difficultyFilter)) return false;
     return true;
   });
 
