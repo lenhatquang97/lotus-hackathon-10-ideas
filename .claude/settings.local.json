@@ -15,7 +15,8 @@
       "Bash(brew install:*)",
       "Bash(lsof -ti:3000)",
       "Bash(xargs kill:*)",
-      "Bash(rsync -av --delete --exclude='node_modules' --exclude='.next' --exclude='.git' --exclude='.env.local' /Users/hungnq/Documents/personal/lotushack/ /tmp/lotus-hackathon-10-ideas/sample-frontend/)"
+      "Bash(rsync -av --delete --exclude='node_modules' --exclude='.next' --exclude='.git' --exclude='.env.local' /Users/hungnq/Documents/personal/lotushack/ /tmp/lotus-hackathon-10-ideas/sample-frontend/)",
+      "Bash(npx next:*)"
     ]
   }
 }
