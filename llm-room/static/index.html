@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Chat Room</title>
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface2: #24243a;
+    --border: #2a2a40;
+    --text: #e0e0f0;
+    --text-muted: #8888aa;
+    --accent: #6c5ce7;
+    --accent2: #a29bfe;
+    --user-bubble: #2d3436;
+    --agent-bubble: #1e1e3a;
+    --system-color: #636e72;
+    --success: #00b894;
+    --danger: #d63031;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .header h1 { font-size: 18px; font-weight: 600; color: var(--accent2); }
+  .header .room-name { font-size: 14px; color: var(--text-muted); margin-left: auto; }
+
+  /* Main layout */
+  .main { flex: 1; display: flex; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 300px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 16px;
+    overflow-y: auto;
+  }
+  .sidebar h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .sidebar input, .sidebar button {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+  }
+  .sidebar input:focus { border-color: var(--accent); }
+  .sidebar button {
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.2s;
+  }
+  .sidebar button:hover { opacity: 0.85; }
+
+  /* Topic cards */
+  .topic-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .topic-card:hover { border-color: var(--accent); }
+  .topic-card .topic-title { font-weight: 600; font-size: 14px; color: var(--accent2); margin-bottom: 4px; }
+  .topic-card .topic-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; line-height: 1.4; }
+  .topic-card .topic-meta { display: flex; flex-wrap: wrap; gap: 4px; }
+  .topic-card .tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text-muted);
+  }
+  .topic-card .char-count {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: white;
+  }
+  .topic-card .topic-chars {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+  }
+  .topic-card .char-item {
+    font-size: 11px;
+    color: var(--text);
+    padding: 2px 0;
+  }
+  .topic-card .char-item .char-name { font-weight: 600; color: var(--accent2); }
+  .topic-card .char-item .char-bias { color: #fdcb6e; font-style: italic; font-size: 10px; }
+
+  .participant {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 14px;
+  }
+  .participant .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+  .participant .dot.agent { background: var(--accent2); }
+
+  /* Chat area */
+  .chat-container { flex: 1; display: flex; flex-direction: column; }
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .msg {
+    max-width: 70%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .msg.user { align-self: flex-end; background: var(--user-bubble); border-bottom-right-radius: 4px; }
+  .msg.agent { align-self: flex-start; background: var(--agent-bubble); border-bottom-left-radius: 4px; }
+  .msg.system {
+    align-self: center; background: transparent;
+    color: var(--system-color); font-size: 12px; font-style: italic;
+  }
+  .msg .sender { font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+  .msg .time { font-size: 11px; color: var(--text-muted); margin-top: 4px; text-align: right; }
+
+  .typing-indicator {
+    align-self: flex-start;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-style: italic;
+    padding: 4px 14px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  /* Input */
+  .input-area {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    gap: 10px;
+  }
+  .input-area input {
+    flex: 1; padding: 10px 14px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface2); color: var(--text); font-size: 14px; outline: none;
+  }
+  .input-area input:focus { border-color: var(--accent); }
+  .input-area button {
+    padding: 10px 20px; background: var(--accent); border: none; border-radius: 8px;
+    color: white; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+  }
+  .input-area button:hover { opacity: 0.85; }
+  .input-area button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Welcome screen */
+  .welcome {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px; color: var(--text-muted);
+  }
+  .welcome h2 { color: var(--accent2); font-size: 24px; }
+
+  /* Script panel */
+  .script-panel {
+    width: 320px; background: var(--surface); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .script-panel-header {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .script-panel-header h3 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-muted); margin: 0;
+  }
+  .script-panel-header .script-badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px;
+    background: var(--accent); color: white;
+  }
+  .script-panel-header .script-badge.generating {
+    background: #fdcb6e; color: #2d3436; animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .script-entries { flex: 1; overflow-y: auto; padding: 10px; }
+  .script-entry {
+    padding: 8px 10px; margin-bottom: 6px; border-radius: 6px;
+    background: var(--surface2); border-left: 3px solid var(--border);
+    font-size: 12px; line-height: 1.4;
+    transition: border-color 0.3s, background 0.3s;
+  }
+  .script-entry.active { border-left-color: var(--accent); background: rgba(108,92,231,0.1); }
+  .script-entry.played { opacity: 0.45; }
+  .script-entry.user-question { border-left-color: #fdcb6e; }
+  .script-entry .se-header { display: flex; justify-content: space-between; margin-bottom: 3px; }
+  .script-entry .se-speaker { font-weight: 600; font-size: 11px; }
+  .script-entry .se-delay { font-size: 10px; color: var(--text-muted); }
+  .script-entry .se-content { color: var(--text); }
+  .script-entry .se-tag {
+    display: inline-block; font-size: 9px; padding: 1px 5px;
+    border-radius: 3px; background: #fdcb6e; color: #2d3436; margin-top: 3px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .script-panel { display: none; }
+    .msg { max-width: 90%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>LLM Chat Room</h1>
+  <span class="room-name" id="roomLabel">Not connected</span>
+</div>
+
+<div class="main">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <!-- Username -->
+    <div>
+      <h3>Your Name</h3>
+      <input id="usernameInput" type="text" placeholder="Enter your name..." value="">
+    </div>
+
+    <!-- Topics -->
+    <div>
+      <h3>Topics</h3>
+      <div id="topicList">
+        <div style="color:var(--text-muted);font-size:13px">Loading topics...</div>
+      </div>
+      <button onclick="loadTopics()" style="margin-top:8px;background:var(--surface2);border:1px solid var(--border)">Refresh</button>
+    </div>
+
+    <!-- Participants (shown when in a room) -->
+    <div>
+      <h3>Participants</h3>
+      <div id="participants"></div>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-container" id="chatContainer">
+    <div class="welcome" id="welcomeScreen">
+      <h2>Welcome to LLM Chat Room</h2>
+      <p>Select a topic from the sidebar to start a conversation</p>
+    </div>
+    <div class="messages" id="messages" style="display:none"></div>
+    <div class="input-area" id="inputArea" style="display:none">
+      <input id="msgInput" type="text" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMsg()">
+      <button onclick="sendMsg()">Send</button>
+    </div>
+  </div>
+
+  <!-- Script Panel -->
+  <div class="script-panel" id="scriptPanel" style="display:none">
+    <div class="script-panel-header">
+      <h3>Conversation Script</h3>
+      <span class="script-badge" id="scriptBadge">Ready</span>
+    </div>
+    <div class="script-entries" id="scriptEntries">
+      <div style="color:var(--text-muted);font-size:12px;padding:10px">
+        Waiting for script generation...
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let ws = null;
+  let currentRoom = null;
+  let username = '';
+  let currentScript = [];
+  let scriptPlayedIndex = -1;
+
+  const senderColors = {};
+  const palette = ['#6c5ce7','#00b894','#e17055','#0984e3','#fdcb6e','#e84393','#00cec9','#d63031','#a29bfe','#55efc4'];
+  function getColor(name) {
+    if (!senderColors[name]) {
+      let h = 0;
+      for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+      senderColors[name] = palette[Math.abs(h) % palette.length];
+    }
+    return senderColors[name];
+  }
+
+  function formatTime(ts) {
+    return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // ---- Topics ----
+
+  async function loadTopics() {
+    try {
+      const res = await fetch('/api/topics');
+      const topics = await res.json();
+      const container = document.getElementById('topicList');
+      container.innerHTML = '';
+
+      if (topics.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-muted);font-size:13px">No topics found</div>';
+        return;
+      }
+
+      topics.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'topic-card';
+
+        const tags = (t.tags || []).map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
+        const charCount = (t.characters || []).length;
+        const chars = (t.characters || []).map(c =>
+          `<div class="char-item">
+            <span class="char-name">${escapeHtml(c.name)}</span> — ${escapeHtml(c.role)}
+            <div class="char-bias">${escapeHtml(c.bias_perception)}</div>
+          </div>`
+        ).join('');
+
+        card.innerHTML = `
+          <div class="topic-title">${escapeHtml(t.title)}</div>
+          <div class="topic-desc">${escapeHtml(t.description).slice(0, 120)}${t.description.length > 120 ? '...' : ''}</div>
+          <div class="topic-meta">
+            ${tags}
+            <span class="char-count">${charCount} characters</span>
+          </div>
+          <div class="topic-chars">${chars}</div>
+        `;
+        card.onclick = () => joinTopic(t.id);
+        container.appendChild(card);
+      });
+    } catch (e) {
+      document.getElementById('topicList').innerHTML =
+        '<div style="color:var(--danger);font-size:13px">Failed to load topics</div>';
+    }
+  }
+
+  async function joinTopic(topicId) {
+    username = document.getElementById('usernameInput').value.trim();
+    if (!username) {
+      username = 'User-' + Math.random().toString(36).slice(2, 6);
+      document.getElementById('usernameInput').value = username;
+    }
+
+    // Create room from topic (or get existing)
+    const res = await fetch('/api/rooms/join-topic', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic_id: topicId }),
+    });
+    const data = await res.json();
+    if (data.error) return alert(data.error);
+
+    joinRoom(data.room_id);
+  }
+
+  function joinRoom(roomId) {
+    if (ws) ws.close();
+
+    currentRoom = roomId;
+    document.getElementById('roomLabel').textContent = `Room: ${roomId}`;
+    document.getElementById('welcomeScreen').style.display = 'none';
+    document.getElementById('messages').style.display = 'flex';
+    document.getElementById('inputArea').style.display = 'flex';
+    document.getElementById('messages').innerHTML = '';
+    document.getElementById('scriptPanel').style.display = 'flex';
+    document.getElementById('scriptEntries').innerHTML =
+      '<div style="color:var(--text-muted);font-size:12px;padding:10px">Waiting for script generation...</div>';
+    currentScript = [];
+    scriptPlayedIndex = -1;
+
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${protocol}//${location.host}/ws`);
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'join', room_id: roomId, username }));
+    };
+    ws.onmessage = (e) => {
+      handleServerMessage(JSON.parse(e.data));
+    };
+    ws.onclose = () => {
+      addSystemMsg('Disconnected from server');
+    };
+  }
+
+  function handleServerMessage(data) {
+    switch (data.type) {
+      case 'message':
+        removeTypingIndicator();
+        addMessage(data);
+        advanceScriptEntry(data.sender, data.content);
+        break;
+      case 'system':
+        addSystemMsg(data.content);
+        break;
+      case 'history':
+        data.messages.forEach(m => {
+          if (m.sender_type === 'system') addSystemMsg(m.content);
+          else addMessage(m);
+        });
+        break;
+      case 'room_info':
+        updateParticipants(data);
+        break;
+      case 'typing':
+        showTypingIndicator(data.sender);
+        break;
+      case 'script':
+        displayScript(data.entries);
+        break;
+      case 'script_status':
+        updateScriptStatus(data.status);
+        break;
+      case 'waiting_for_user':
+        removeTypingIndicator();
+        showWaitingForUser(data.speaker);
+        break;
+      case 'error':
+        alert(data.content);
+        break;
+    }
+  }
+
+  function addMessage(data) {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    const isUser = data.sender_type === 'user';
+    div.className = `msg ${isUser ? 'user' : 'agent'}`;
+    div.innerHTML = `
+      <div class="sender" style="color:${getColor(data.sender)}">${data.sender}</div>
+      <div>${escapeHtml(data.content)}</div>
+      <div class="time">${formatTime(data.timestamp)}</div>
+    `;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function addSystemMsg(text) {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'msg system';
+    div.textContent = text;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function showTypingIndicator(sender) {
+    removeTypingIndicator();
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'typing-indicator';
+    div.id = 'typingIndicator';
+    div.innerHTML = `<span style="color:${getColor(sender)}">${sender}</span> is thinking...`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function removeTypingIndicator() {
+    const el = document.getElementById('typingIndicator');
+    if (el) el.remove();
+  }
+
+  function updateParticipants(data) {
+    const el = document.getElementById('participants');
+    let html = '';
+    (data.agents || []).forEach(name => {
+      html += `<div class="participant"><span class="dot agent"></span>${name}</div>`;
+    });
+    (data.users || []).forEach(u => {
+      html += `<div class="participant"><span class="dot"></span>${u}</div>`;
+    });
+    el.innerHTML = html;
+  }
+
+  function sendMsg() {
+    const input = document.getElementById('msgInput');
+    const text = input.value.trim();
+    if (!text || !ws) return;
+    ws.send(JSON.stringify({ type: 'message', content: text }));
+    input.value = '';
+    input.focus();
+    const waiting = document.getElementById('waitingIndicator');
+    if (waiting) waiting.remove();
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // --- Script panel ---
+  function displayScript(entries) {
+    currentScript = entries;
+    scriptPlayedIndex = -1;
+    const container = document.getElementById('scriptEntries');
+    container.innerHTML = '';
+    const badge = document.getElementById('scriptBadge');
+    badge.textContent = `${entries.length} lines`;
+    badge.className = 'script-badge';
+
+    entries.forEach((entry, i) => {
+      const div = document.createElement('div');
+      div.className = 'script-entry' + (entry.is_user_question ? ' user-question' : '');
+      div.id = `script-entry-${i}`;
+      div.innerHTML = `
+        <div class="se-header">
+          <span class="se-speaker" style="color:${getColor(entry.speaker)}">${entry.speaker}</span>
+          <span class="se-delay">${entry.delay}s</span>
+        </div>
+        <div class="se-content">${escapeHtml(entry.content)}</div>
+        ${entry.is_user_question ? '<span class="se-tag">User Question</span>' : ''}
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function updateScriptStatus(status) {
+    const badge = document.getElementById('scriptBadge');
+    if (status === 'generating') {
+      badge.textContent = 'Generating...';
+      badge.className = 'script-badge generating';
+    } else if (status === 'finished') {
+      badge.textContent = 'Finished';
+      badge.className = 'script-badge';
+      badge.style.background = 'var(--success)';
+      addSystemMsg('The conversation script has finished.');
+    } else {
+      badge.textContent = 'Ready';
+      badge.className = 'script-badge';
+      badge.style.background = '';
+    }
+  }
+
+  function showWaitingForUser(speaker) {
+    const existing = document.getElementById('waitingIndicator');
+    if (existing) existing.remove();
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'typing-indicator';
+    div.id = 'waitingIndicator';
+    div.style.color = '#fdcb6e';
+    div.innerHTML = `<span style="color:${getColor(speaker)}">${speaker}</span> is waiting for your answer...`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function advanceScriptEntry(sender, content) {
+    for (let i = scriptPlayedIndex + 1; i < currentScript.length; i++) {
+      if (currentScript[i].speaker === sender) {
+        for (let j = scriptPlayedIndex + 1; j < i; j++) {
+          const el = document.getElementById(`script-entry-${j}`);
+          if (el) el.classList.add('played');
+        }
+        const el = document.getElementById(`script-entry-${i}`);
+        if (el) {
+          el.classList.add('active');
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          setTimeout(() => {
+            el.classList.remove('active');
+            el.classList.add('played');
+          }, 1500);
+        }
+        scriptPlayedIndex = i;
+        break;
+      }
+    }
+  }
+
+  // Init
+  loadTopics();
+</script>
+</body>
+</html>

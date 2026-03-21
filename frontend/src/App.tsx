@@ -12,6 +12,7 @@ import SessionDebriefPage from './pages/SessionDebriefPage';
 import StudioDashboardPage from './pages/StudioDashboardPage';
 import TopicCreatorPage from './pages/TopicCreatorPage';
 import TopicEditorPage from './pages/TopicEditorPage';
+import WorldPage from './pages/WorldPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -34,6 +35,8 @@ export default function App() {
         <Route path="/studio" element={<ProtectedRoute><StudioDashboardPage /></ProtectedRoute>} />
         <Route path="/studio/topics/create" element={<ProtectedRoute><TopicCreatorPage /></ProtectedRoute>} />
         <Route path="/studio/topics/:topicId/edit" element={<ProtectedRoute><TopicEditorPage /></ProtectedRoute>} />
+        <Route path="/world" element={<ProtectedRoute><WorldPage /></ProtectedRoute>} />
+        <Route path="/world/:topicId" element={<ProtectedRoute><WorldPage /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );

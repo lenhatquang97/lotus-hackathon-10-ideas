@@ -52,3 +52,68 @@
 .animate-hero-2 { animation: fadeUpSoft 500ms ease-out 120ms both; }
 .animate-hero-3 { animation: fadeUpSoft 500ms ease-out 240ms both; }
 .animate-hero-4 { animation: fadeUpSoft 500ms ease-out 360ms both; }
+
+/* ===== Virtual Room (World) Styles ===== */
+:root {
+  --vr-purple: #a855f7;
+  --vr-teal: #06b6d4;
+  --vr-orange: #f97316;
+  --vr-yellow: #fbbf24;
+  --vr-green: #84cc16;
+  --vr-pink: #ec4899;
+}
+
+@keyframes vr-neon-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(168, 85, 247, 0.4), 0 0 24px rgba(168, 85, 247, 0.15); }
+  50% { box-shadow: 0 0 16px rgba(168, 85, 247, 0.6), 0 0 40px rgba(168, 85, 247, 0.25); }
+}
+
+@keyframes vr-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes vr-fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes vr-spin-glow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.vr-glass-card {
+  background: rgba(15, 10, 30, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 16px;
+}
+
+.vr-neon-border {
+  position: relative;
+}
+.vr-neon-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 17px;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--vr-purple), var(--vr-teal), var(--vr-orange));
+  background-size: 200% 200%;
+  animation: vr-gradient-shift 4s ease infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.vr-scroll::-webkit-scrollbar { width: 4px; }
+.vr-scroll::-webkit-scrollbar-track { background: transparent; }
+.vr-scroll::-webkit-scrollbar-thumb { background: rgba(168, 85, 247, 0.3); border-radius: 4px; }
+.vr-scroll::-webkit-scrollbar-thumb:hover { background: rgba(168, 85, 247, 0.5); }
+
+.vr-transcript-msg { animation: vr-fade-in-up 0.3s ease-out; }

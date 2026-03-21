@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { topicsApi, sessionsApi } from '../services/api';
+import { topicsApi } from '../services/api';
 import { Navbar } from '../components/Navbar';
 import type { Topic } from '../types';
 
@@ -81,14 +81,9 @@ export default function TopicCatalogPage() {
     return true;
   });
 
-  const handleJoin = async (topicId: string) => {
+  const handleJoin = (topicId: string) => {
     setJoining(topicId);
-    try {
-      const res = await sessionsApi.create(topicId);
-      navigate(`/session/${res.data.id}/lobby`);
-    } catch {
-      setJoining(null);
-    }
+    navigate(`/world/${topicId}`);
   };
 
   return (
