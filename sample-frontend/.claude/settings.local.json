@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --no-git --import-alias \"@/*\" --use-npm)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --no-git --import-alias \"@/*\" --use-npm --yes)",
+      "Bash(npm install:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx shadcn@latest init -d --yes)",
+      "Bash(npx shadcn@latest add card badge dialog input textarea label select tabs separator scroll-area progress -y)",
+      "Bash(npm run:*)",
+      "Bash(mkdir -p /tmp/lotus-hackathon-10-ideas/sample-frontend)",
+      "Bash(rsync -av --exclude='node_modules' --exclude='.next' --exclude='.git' /Users/hungnq/Documents/personal/lotushack/ /tmp/lotus-hackathon-10-ideas/sample-frontend/)"
+    ]
+  }
+}
