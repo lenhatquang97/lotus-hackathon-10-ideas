@@ -38,7 +38,7 @@ TOPICS = [
             "The learner has been with the company for 2 years and received a 'Exceeds Expectations' review. "
             "Industry benchmarks show the learner is paid 15% below market rate for their role."
         ),
-        "cefr_levels": ["B2", "C1"],
+        "difficulty_levels": ["Intermediate", "Advanced"],
         "tags": ["business", "negotiation", "HR"],
         "characters": [
             {
@@ -68,7 +68,7 @@ TOPICS = [
             "Local industry employs 8,000 people and accounts for 30% of regional emissions. "
             "Renewable energy jobs in the region have grown 40% in the past 3 years."
         ),
-        "cefr_levels": ["B2", "C1", "C2"],
+        "difficulty_levels": ["Intermediate", "Advanced"],
         "tags": ["environment", "debate", "policy"],
         "characters": [
             {
@@ -98,7 +98,7 @@ TOPICS = [
             "The patient is 42 years old, moderately active, and has a family history of heart disease. "
             "The clinic recommends lifestyle changes before medication."
         ),
-        "cefr_levels": ["B1", "B2"],
+        "difficulty_levels": ["Beginner", "Intermediate"],
         "tags": ["healthcare", "medical", "communication"],
         "characters": [
             {
@@ -120,7 +120,7 @@ TOPICS = [
             "The team values autonomy, moves fast, and expects engineers to own their projects end-to-end. "
             "The interview includes both technical and culture-fit components."
         ),
-        "cefr_levels": ["B2", "C1"],
+        "difficulty_levels": ["Intermediate", "Advanced"],
         "tags": ["career", "interview", "technology"],
         "characters": [
             {
@@ -150,7 +150,7 @@ TOPICS = [
             "Hotel policy allows upgrades for Gold members when available, and compensation vouchers for booking errors. "
             "The guest has an important business dinner tonight and needs the situation resolved quickly."
         ),
-        "cefr_levels": ["B1", "B2"],
+        "difficulty_levels": ["Beginner", "Intermediate"],
         "tags": ["travel", "customer service", "assertiveness"],
         "characters": [
             {
@@ -243,7 +243,7 @@ async def seed():
             "description": topic_data["description"],
             "domain_knowledge": topic_data["domain_knowledge"],
             "status": "published",
-            "cefr_levels": topic_data["cefr_levels"],
+            "difficulty_levels": topic_data["difficulty_levels"],
             "tags": topic_data["tags"],
             "characters": characters,
             "play_count": 0,

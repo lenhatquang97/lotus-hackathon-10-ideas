@@ -35,7 +35,7 @@ async def create_topic(creator_id: str, data: dict) -> dict:
         "description": data["description"],
         "domain_knowledge": data["domain_knowledge"],
         "status": "draft",
-        "cefr_levels": data.get("cefr_levels", []),
+        "difficulty_levels": data.get("difficulty_levels", []),
         "tags": data.get("tags", []),
         "characters": characters,
         "play_count": 0,
@@ -57,7 +57,7 @@ async def get_topic_by_id(topic_id: str) -> Optional[dict]:
 async def get_topics(
     status: Optional[str] = "published",
     tags: Optional[List[str]] = None,
-    cefr: Optional[List[str]] = None,
+    difficulty: Optional[List[str]] = None,
     skip: int = 0,
     limit: int = 20,
 ) -> List[dict]:
@@ -67,8 +67,8 @@ async def get_topics(
         query["status"] = status
     if tags:
         query["tags"] = {"$in": tags}
-    if cefr:
-        query["cefr_levels"] = {"$in": cefr}
+    if difficulty:
+        query["difficulty_levels"] = {"$in": difficulty}
 
     cursor = (
         db.conversation_topics.find(query)

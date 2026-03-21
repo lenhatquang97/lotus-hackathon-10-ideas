@@ -1,11 +1,26 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { topicsApi, studioApi } from '../services/api';
+import { topicsApi, generateApi } from '../services/api';
 import { Navbar } from '../components/Navbar';
+import { useDebounce } from '../hooks/useDebounce';
+import { analyzeBrief } from '../lib/brief-analyzer';
+import type { KnowledgeItem, Difficulty } from '../lib/brief-analyzer';
+import type { Character } from '../types';
+import { KnowledgeZone } from '../components/studio/KnowledgeZone';
+import { BriefZone } from '../components/studio/BriefZone';
+import { LivePreviewZone } from '../components/studio/LivePreviewZone';
+import { GenerateBar } from '../components/studio/GenerateBar';
+import { WorldDraftModal } from '../components/studio/WorldDraftModal';
+import type { WorldDraft } from '../components/studio/WorldDraftModal';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+const DIFFICULTY_MAP: Record<Difficulty, string> = {
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+};
 
 const VOICES = [
   { id: '21m00Tcm4TlvDq8ikWAM', label: 'Rachel', gender: 'F', style: 'Calm' },
@@ -896,202 +911,160 @@ function StepPublish({
 export default function TopicCreatorPage() {
   const navigate = useNavigate();
 
-  // Step
-  const [step, setStep] = useState<Step>('setup');
-
-  // Step 1 state
-  const [title, setTitle]                     = useState('');
-  const [description, setDescription]         = useState('');
-  const [domainKnowledge, setDomainKnowledge] = useState('');
-  const [tags, setTags]                       = useState('');
-  const [cefrLevels, setCefrLevels]           = useState<string[]>(['B2']);
-  const [numCharacters, setNumCharacters]     = useState(2);
-
-  // Step 2 state
-  const [characters, setCharacters] = useState<CharacterDraft[]>([]);
-
-  // Step 3 state
-  const [conversation, setConversation] = useState<ConversationTurn[]>([]);
-
-  // Loading / error
+  const [brief, setBrief] = useState('');
+  const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
+  const [difficulty, setDifficulty] = useState<Difficulty>('intermediate');
   const [generating, setGenerating] = useState(false);
-  const [saving, setSaving]         = useState(false);
-  const [error, setError]           = useState('');
+  const [generatedDraft, setGeneratedDraft] = useState<WorldDraft | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [error, setError] = useState('');
+  const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
+  // Debounced brief for live preview
+  const debouncedBrief = useDebounce(brief, 800);
+  const preview = useMemo(
+    () => analyzeBrief(debouncedBrief, knowledgeItems),
+    [debouncedBrief, knowledgeItems]
+  );
 
-  const updateChar = (i: number, field: keyof CharacterDraft, value: string) =>
-    setCharacters(prev => prev.map((c, idx) => (idx === i ? { ...c, [field]: value } : c)));
+  const canGenerate = brief.trim().length > 20 || knowledgeItems.length > 0;
 
-  // ── Step 1 → 2: generate characters ───────────────────────────────────────
-
-  const handleGenerateCharacters = async () => {
-    setError('');
+  const handleGenerate = async () => {
+    if (!canGenerate) return;
     setGenerating(true);
+    setError('');
+
     try {
-      const res = await studioApi.generateCharacters({
-        title, description, domain_knowledge: domainKnowledge,
-        num_characters: numCharacters,
-        cefr_levels: cefrLevels,
-        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+      const knowledgeTexts = knowledgeItems
+        .filter((i) => i.content)
+        .map((i) => i.content);
+
+      const res = await generateApi.generateWorld({
+        brief,
+        difficulty,
+        knowledge_items: knowledgeTexts.length > 0 ? knowledgeTexts : undefined,
       });
-      const generated: CharacterDraft[] = res.data.characters.map((c: any, i: number) => ({
-        name:             c.name,
-        role:             c.role,
-        persona:          c.persona,
-        bias_perception:  c.bias_perception,
-        voice_id:         VOICES[i % (VOICES.length - 1)].id,
-        avatar_preset:    AVATAR_PRESETS[i % AVATAR_PRESETS.length].id,
-        visual_preset:    VISUAL_PRESETS[i % VISUAL_PRESETS.length].id,
+
+      const generated = res.data;
+
+      // Map AI-generated characters to our Character type
+      const characters: Character[] = (generated.characters || []).map((c: any, i: number) => ({
+        id: `gen-${i}`,
+        name: c.name || `Character ${i + 1}`,
+        role: c.role || 'Anchor',
+        persona: c.persona || '',
+        bias_perception: c.bias_perception || '',
+        voice_id: 'default',
+        avatar_preset: 'default',
       }));
-      setCharacters(generated);
-      setStep('characters');
+
+      const draft: WorldDraft = {
+        title: generated.title || 'Untitled World',
+        description: generated.description || brief.slice(0, 200),
+        domain_knowledge: generated.domain_knowledge || brief,
+        difficulty_levels: generated.difficulty_levels || [DIFFICULTY_MAP[difficulty]],
+        tags: generated.tags || preview.detectedTopics.slice(0, 3),
+        characters: characters.length > 0 ? characters : [
+          { id: 'char-1', name: 'Character 1', role: 'Anchor', persona: '', bias_perception: '', voice_id: 'default', avatar_preset: 'default' },
+        ],
+      };
+
+      setGeneratedDraft(draft);
+      setShowModal(true);
     } catch (e: any) {
-      setError(e.response?.data?.detail || 'Character generation failed. Check your OpenAI API key.');
+      const detail = e.response?.data?.detail;
+      setError(detail || 'Failed to generate world. Please try again.');
     } finally {
       setGenerating(false);
     }
   };
 
-  // ── Step 2 → 3: generate sample conversation ──────────────────────────────
-
-  const handleGenerateConversation = async () => {
-    setGenerating(true);
+  const saveWorld = async (publish: boolean) => {
+    if (!generatedDraft) return;
     setError('');
-    try {
-      const res = await studioApi.generateConversation({
-        title,
-        domain_knowledge: domainKnowledge,
-        characters: characters.map(c => ({
-          name: c.name, role: c.role, persona: c.persona, bias_perception: c.bias_perception,
-        })),
-      });
-      setConversation(res.data.conversation);
-      setStep('conversation');
-    } catch (e: any) {
-      setError(e.response?.data?.detail || 'Conversation generation failed.');
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  // ── Publish ────────────────────────────────────────────────────────────────
-
-  const handleSave = async (publish: boolean) => {
-    setError('');
-    setSaving(true);
-
-    // Embed sample conversation as a prefix in domain_knowledge context
-    const conversationContext = conversation.length > 0
-      ? `\n\n---\nSample conversation (for context):\n` +
-        conversation.map(t => `${t.speaker}: ${t.text}`).join('\n')
-      : '';
 
     try {
       const res = await topicsApi.create({
-        title,
-        description,
-        domain_knowledge: domainKnowledge + conversationContext,
-        cefr_levels: cefrLevels,
-        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-        characters: characters.map(c => ({
+        title: generatedDraft.title,
+        description: generatedDraft.description,
+        domain_knowledge: generatedDraft.domain_knowledge,
+        difficulty_levels: generatedDraft.difficulty_levels,
+        tags: generatedDraft.tags,
+        characters: generatedDraft.characters.map(c => ({
           name: c.name, role: c.role, persona: c.persona,
-          bias_perception: c.bias_perception, voice_id: c.voice_id,
-          avatar_preset: c.avatar_preset, visual_preset: c.visual_preset,
+          bias_perception: c.bias_perception, voice_id: c.voice_id, avatar_preset: c.avatar_preset,
         })),
       });
 
       if (publish) {
         await topicsApi.publish(res.data.id);
-        navigate('/topics');
+        navigate(`/topics/${res.data.id}`);
       } else {
         navigate('/studio');
       }
     } catch (e: any) {
-      setError(e.response?.data?.detail || 'Failed to save world.');
-    } finally {
-      setSaving(false);
+      setError(e.response?.data?.detail || 'Failed to save');
     }
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-paper)' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg)' }}>
       <Navbar />
-      <div className="max-w-[840px] mx-auto px-12 py-16">
-        {/* Page header */}
-        <div className="mb-10">
-          <Link to="/studio" className="meta hover:underline mb-4 inline-block" style={{ fontSize: '11px' }}>
-            ← Studio
-          </Link>
-          <h1 className="font-display text-[48px] italic" style={{ color: 'var(--color-ink)' }}>
-            Create World
-          </h1>
-          <p className="font-body text-[15px] mt-2" style={{ color: 'var(--color-ash)' }}>
-            Define a scenario, let AI build your characters, preview the conversation, then publish.
-          </p>
+
+      {/* Page header */}
+      <div className="max-w-[1120px] mx-auto w-full px-12 pt-12 pb-9 border-b" style={{ borderColor: 'var(--color-border)' }}>
+        <Link to="/studio" className="font-ui text-[11px] tracking-widest uppercase block mb-5 no-underline transition-colors duration-200"
+          style={{ color: 'var(--color-text-secondary)' }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-text-primary)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-text-secondary)')}>
+          &larr; Studio
+        </Link>
+        <h1 className="font-display font-light text-5xl leading-none mb-2" style={{ color: 'var(--color-text-primary)' }}>
+          Create World
+        </h1>
+        <p className="font-body text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          Drop materials, describe your scenario, generate.
+        </p>
+      </div>
+
+      {/* Composing Studio */}
+      <div className="max-w-[1120px] mx-auto w-full px-12 py-12 flex-1 flex flex-col">
+        {/* 3-column grid */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] lg:grid-cols-[280px_1fr_300px] gap-px border min-h-[520px]"
+          style={{ backgroundColor: 'var(--color-border)', borderColor: 'var(--color-border)', borderRadius: '2px' }}>
+          {/* Knowledge — left */}
+          <div className="p-8 order-2 md:order-none" style={{ backgroundColor: 'var(--color-bg)' }}>
+            <KnowledgeZone items={knowledgeItems} onAdd={(item) => setKnowledgeItems(prev => [...prev, item])} onRemove={(id) => setKnowledgeItems(prev => prev.filter(i => i.id !== id))} />
+          </div>
+
+          {/* Brief — center */}
+          <div className="p-8 order-1 md:order-none" style={{ backgroundColor: 'var(--color-surface)' }}>
+            <BriefZone value={brief} onChange={setBrief} difficulty={difficulty} onDifficultyChange={setDifficulty} onTemplateSelect={setActiveTemplate} />
+          </div>
+
+          {/* Preview — right */}
+          <div className="p-8 order-3 md:order-none md:row-span-2 lg:row-span-1" style={{ backgroundColor: 'rgba(13, 11, 20, 0.025)' }}>
+            <LivePreviewZone preview={preview} brief={brief} activeTemplate={activeTemplate} />
+          </div>
         </div>
 
-        <StepIndicator current={step} />
+        {/* Error */}
+        {error && <p className="font-body text-sm mt-4" style={{ color: 'var(--color-text-primary)' }}>{error}</p>}
 
-        {/* Step content */}
-        {step === 'setup' && (
-          <StepSetup
-            title={title} setTitle={setTitle}
-            description={description} setDescription={setDescription}
-            domainKnowledge={domainKnowledge} setDomainKnowledge={setDomainKnowledge}
-            tags={tags} setTags={setTags}
-            cefrLevels={cefrLevels} setCefrLevels={setCefrLevels}
-            numCharacters={numCharacters} setNumCharacters={setNumCharacters}
-            generating={generating}
-            onGenerate={handleGenerateCharacters}
-            error={error}
+        {/* Generate bar */}
+        <GenerateBar canGenerate={canGenerate} isGenerating={generating} onGenerate={handleGenerate} />
+
+        {/* Draft modal */}
+        {showModal && generatedDraft && (
+          <WorldDraftModal
+            draft={generatedDraft}
+            onDraftChange={setGeneratedDraft}
+            onPublish={() => saveWorld(true)}
+            onSaveDraft={() => saveWorld(false)}
+            onDismiss={() => setShowModal(false)}
           />
-        )}
-
-        {step === 'characters' && (
-          <StepCharacters
-            characters={characters}
-            onUpdate={updateChar}
-            onRegenerate={handleGenerateCharacters}
-            regenerating={generating}
-            onNext={handleGenerateConversation}
-          />
-        )}
-
-        {step === 'conversation' && (
-          <StepConversation
-            conversation={conversation}
-            characters={characters}
-            generating={generating}
-            onRegenerate={handleGenerateConversation}
-            onNext={() => setStep('publish')}
-          />
-        )}
-
-        {step === 'publish' && (
-          <StepPublish
-            title={title} description={description} domainKnowledge={domainKnowledge}
-            tags={tags} cefrLevels={cefrLevels} characters={characters}
-            conversation={conversation} saving={saving} onSave={handleSave} error={error}
-          />
-        )}
-
-        {/* Back navigation (steps 2-4) */}
-        {step !== 'setup' && (
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => {
-                const order: Step[] = ['setup', 'characters', 'conversation', 'publish'];
-                setStep(order[order.indexOf(step) - 1]);
-              }}
-              className="font-body text-[13px] underline underline-offset-4"
-              style={{ color: 'var(--color-ash)' }}
-            >
-              ← Back
-            </button>
-          </div>
         )}
       </div>
     </div>

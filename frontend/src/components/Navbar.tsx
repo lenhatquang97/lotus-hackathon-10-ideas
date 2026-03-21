@@ -12,42 +12,45 @@ export function Navbar() {
 
   return (
     <nav
-      className="h-14 border-b flex items-center justify-between px-12"
-      style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-paper)' }}
+      className="h-[52px] flex items-center justify-between px-12 sticky top-0 z-[100]"
+      style={{
+        background: 'rgba(13, 11, 20, 0.85)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderBottom: '1px solid var(--color-border)',
+      }}
     >
       <Link
         to="/"
-        className="font-display italic text-xl"
-        style={{ color: 'var(--color-ink)' }}
+        className="font-display text-[17px] font-light tracking-[0.02em]"
+        style={{ color: 'var(--color-text-primary)', textDecoration: 'none' }}
       >
-        Lotus
+        LotusHack
       </Link>
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-8">
         {user ? (
           <>
             <Link
               to="/topics"
-              className="meta hover:text-ink transition-colors"
-              style={{ fontSize: '11px' }}
+              className="font-ui text-[9px] tracking-[0.14em] uppercase transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)', textDecoration: 'none' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-text-primary)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-secondary)')}
             >
               Worlds
             </Link>
-            {user.role === 'creator' && (
-              <Link
-                to="/studio"
-                className="meta hover:text-ink transition-colors"
-                style={{ fontSize: '11px' }}
-              >
-                Studio
-              </Link>
-            )}
-            <span className="meta" style={{ fontSize: '11px' }}>
+            <span
+              className="font-ui text-[9px] tracking-[0.14em] uppercase"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               {user.profile.display_name}
             </span>
             <button
               onClick={handleLogout}
-              className="font-body text-[13px] underline underline-offset-4"
-              style={{ color: 'var(--color-ash)' }}
+              className="font-body text-[13px] underline underline-offset-[3px] bg-transparent border-none cursor-pointer transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-text-primary)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-secondary)')}
             >
               Sign out
             </button>
@@ -56,15 +59,16 @@ export function Navbar() {
           <>
             <Link
               to="/auth/login"
-              className="font-body text-[13px] underline underline-offset-4"
-              style={{ color: 'var(--color-ink)' }}
+              className="font-body text-[13px] underline underline-offset-[3px] transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-text-primary)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-secondary)')}
             >
               Sign in
             </Link>
             <Link
               to="/auth/register"
-              className="font-body text-[13px] px-5 py-2 border transition-all duration-200 hover:bg-ink hover:text-white"
-              style={{ borderColor: 'var(--color-ink)', color: 'var(--color-ink)' }}
+              className="btn-primary"
             >
               Get Started
             </Link>
