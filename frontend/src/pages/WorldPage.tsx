@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
-import VirtualRoom from "../components/world/VirtualRoom";
+import { RoomPage } from "../room/RoomPage";
 
 export default function WorldPage() {
   const { topicId } = useParams<{ topicId: string }>();
-  return <VirtualRoom topicId={topicId} />;
+  return <RoomPage topicId={topicId} />;
 }

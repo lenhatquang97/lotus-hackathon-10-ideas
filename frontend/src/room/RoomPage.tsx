@@ -3,8 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import './room.css';
 import { useRoomStore } from './roomStore';
 import { roomEvents } from './roomEvents';
-import { useMicCapture } from './hooks/useMicCapture';
-import { useVAD } from './hooks/useVAD';
 import { SceneCanvas } from './components/SceneCanvas';
 import { TopBarOverlay } from './components/TopBarOverlay';
 import { AgentNameplate } from './components/AgentNameplate';
@@ -14,25 +12,34 @@ import { ParticipantRail } from './components/ParticipantRail';
 import { SessionEndModal } from './components/SessionEndModal';
 import { BriefingOverlay } from './components/BriefingOverlay';
 import { sessionsApi, topicsApi } from '../services/api';
+import type { RoomManager } from '../lib/room-manager';
 import type { ServerEvent } from '../types';
 
 const WS_BASE = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
 
-export function RoomPage() {
+interface RoomPageProps {
+  /** When provided, run in "world" mode (3D avatars + Scribe STT via /ws/room/:topicId) */
+  topicId?: string;
+}
+
+export function RoomPage({ topicId: topicIdProp }: RoomPageProps) {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
-  const micInitRef = useRef(false);
+  const roomManagerRef = useRef<RoomManager | null>(null);
   const silenceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const { start: startMic, stop: stopMic } = useMicCapture();
-  const { attach: attachVAD, detach: detachVAD } = useVAD();
+
+  // Mode: "world" (topicId) or "session" (sessionId)
+  const isWorldMode = !!topicIdProp;
 
   const [showEndModal, setShowEndModal] = useState(false);
   const [showBriefing, setShowBriefing] = useState(false);
   const [scenarioContext, setScenarioContext] = useState('');
+  const [sceneLoading, setSceneLoading] = useState(true);
+  const [sceneError, setSceneError] = useState<string | null>(null);
+  const [loadingStage, setLoadingStage] = useState('Initializing...');
 
   // Store selectors
   const worldName = useRoomStore(s => s.worldName);
@@ -57,7 +64,7 @@ export function RoomPage() {
   const nameplateName = roomState === 'LEARNER_SPEAKING' ? 'You' : (activeAgent?.name ?? '');
   const nameplateRole = roomState === 'LEARNER_SPEAKING' ? '' : (activeAgent?.role ?? '');
 
-  // ─── Audio playback for agent speech ───────────────────────────────────────
+  // ─── Audio playback for agent speech (session mode) ─────────────────────────
   const playAudioBytes = useCallback(async (bytes: ArrayBuffer) => {
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext();
@@ -73,12 +80,11 @@ export function RoomPage() {
     }
   }, []);
 
-  // ─── WebSocket event handler ───────────────────────────────────────────────
+  // ─── Session-mode WebSocket event handler ───────────────────────────────────
   const handleServerEvent = useCallback((event: ServerEvent) => {
     switch (event.type) {
       case 'session_state':
         if (event.status === 'active') {
-          // Session started — transition to AMBIENT
           const store = useRoomStore.getState();
           if (store.roomState === 'CONNECTING') {
             store.setRoomState('AMBIENT');
@@ -122,25 +128,146 @@ export function RoomPage() {
     }
   }, [navigate, sessionId]);
 
-  // ─── Initialize: fetch data + connect WebSocket ────────────────────────────
-  useEffect(() => {
-    if (!sessionId) return;
+  // ─── 3D Scene ready callback (world mode) ───────────────────────────────────
+  const handleSceneReady = useCallback((room: RoomManager) => {
+    roomManagerRef.current = room;
+    setSceneLoading(false);
 
+    if (isWorldMode) {
+      const store = useRoomStore.getState();
+      store.setRoomState('AMBIENT');
+      store.setMicActive(true);
+
+      // Connect RoomManager WS to /ws/room/:topicId
+      room.connectWebSocket((entry) => {
+        // Bridge VirtualRoom transcript → roomStore transcript
+        store.addTranscriptLine({
+          id: `vr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          speakerId: entry.role === 'user' ? 'user' : entry.speaker,
+          speakerName: entry.speaker,
+          isUser: entry.role === 'user',
+          text: entry.message,
+          isStreaming: false,
+          timestamp: Date.now(),
+        });
+
+        // Update room state based on who's speaking
+        if (entry.role === 'agent') {
+          store.setRoomState('AGENT_SPEAKING');
+          store.setFloorOwner(entry.speaker);
+        }
+      }, topicIdProp);
+
+      // Wire up partial transcript → streaming transcript line in store
+      let partialLineId: string | null = null;
+      room.onPartialTranscript = (text: string) => {
+        const s = useRoomStore.getState();
+        if (text) {
+          if (!partialLineId) {
+            partialLineId = `partial-${Date.now()}`;
+            s.addTranscriptLine({
+              id: partialLineId,
+              speakerId: 'user',
+              speakerName: 'You',
+              isUser: true,
+              text,
+              isStreaming: true,
+              timestamp: Date.now(),
+            });
+            s.setRoomState('LEARNER_SPEAKING');
+            s.setFloorOwner('user');
+          } else {
+            // Update the existing partial line
+            s.appendTranscriptChunk(partialLineId, '');
+            // Replace full text by removing old and adding new
+            const lines = s.transcript.map(l =>
+              l.id === partialLineId ? { ...l, text } : l
+            );
+            useRoomStore.setState({ transcript: lines });
+          }
+        } else {
+          // Partial cleared → finalize the streaming line
+          if (partialLineId) {
+            s.finalizeTranscriptLine(partialLineId);
+            partialLineId = null;
+            s.setRoomState('AMBIENT');
+            s.setFloorOwner(null);
+          }
+        }
+      };
+
+      // Wire up barge-in
+      room.onUserSpeechStart = () => {
+        room.stopSpeaking();
+      };
+
+      // Auto-start Scribe recording
+      room.startRecording().catch(err => {
+        console.warn('Failed to start Scribe recording:', err);
+      });
+    }
+  }, [isWorldMode, topicIdProp]);
+
+  const handleSceneError = useCallback((err: Error) => {
+    setSceneError(err.message);
+    setSceneLoading(false);
+  }, []);
+
+  const handleSceneProgress = useCallback((stage: string, _percent: number) => {
+    setLoadingStage(stage);
+  }, []);
+
+  // ─── Initialize: session-mode (fetch data + connect WS) ────────────────────
+  useEffect(() => {
     const store = useRoomStore.getState();
     store.reset();
 
-    // Fetch session and topic data
+    if (isWorldMode) {
+      // World mode: set world name from topicId, RoomManager handles WS
+      store.setWorldName(topicIdProp || 'World');
+
+      // Fetch topic info for world name
+      if (topicIdProp) {
+        topicsApi.get(topicIdProp).then(res => {
+          const topic = res.data;
+          store.setWorldName(topic.title || 'World');
+          setScenarioContext(topic.description || topic.domain_knowledge || '');
+
+          const agentList = (topic.characters || []).map((char: any) => ({
+            id: char.id || char.name,
+            name: char.name,
+            role: (char.role || 'ANCHOR').toUpperCase(),
+            avatarColor: '#4a7ab5',
+          }));
+          store.setAgents(agentList);
+        }).catch(() => {
+          console.warn('Failed to load topic data');
+        });
+      }
+
+      // Session timer
+      timerRef.current = setInterval(() => {
+        useRoomStore.getState().tickSession();
+      }, 1000);
+
+      return () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        roomManagerRef.current?.stopRecording();
+        roomManagerRef.current?.dispose();
+      };
+    }
+
+    // Session mode (existing behavior)
+    if (!sessionId) return;
+
     sessionsApi.get(sessionId).then(async (res) => {
       const session = res.data;
       try {
         const topicRes = await topicsApi.get(session.topic_id);
         const topic = topicRes.data;
-
-        // Populate room store from topic data
         store.setWorldName(topic.title || 'Untitled World');
         setScenarioContext(topic.description || topic.domain_knowledge || '');
 
-        // Map characters to agents
         const agentList = (topic.characters || []).map((char: any) => ({
           id: char.id,
           name: char.name,
@@ -155,7 +282,7 @@ export function RoomPage() {
       console.warn('Failed to load session data');
     });
 
-    // Connect WebSocket — pass JWT as query param (browsers can't set WS headers)
+    // Connect session WebSocket
     const token = localStorage.getItem('token') || '';
     const wsUrl = `${WS_BASE}/api/v1/sessions/ws/session/${sessionId}?token=${encodeURIComponent(token)}`;
     const socket = new WebSocket(wsUrl);
@@ -163,7 +290,6 @@ export function RoomPage() {
 
     socket.onopen = () => {
       console.log('Room WebSocket connected');
-      // Send start_session
       socket.send(JSON.stringify({ type: 'start_session' }));
     };
 
@@ -181,21 +307,15 @@ export function RoomPage() {
     };
 
     socket.onerror = (e) => console.error('WS error:', e);
-    socket.onclose = () => {
-      console.log('Room WebSocket closed');
-    };
+    socket.onclose = () => console.log('Room WebSocket closed');
 
-    // Session timer
     timerRef.current = setInterval(() => {
       useRoomStore.getState().tickSession();
     }, 1000);
 
-    // If WebSocket fails to connect, fallback to AMBIENT after timeout
     const fallbackTimer = setTimeout(() => {
       const s = useRoomStore.getState();
-      if (s.roomState === 'CONNECTING') {
-        s.setRoomState('AMBIENT');
-      }
+      if (s.roomState === 'CONNECTING') s.setRoomState('AMBIENT');
     }, 5000);
 
     return () => {
@@ -204,41 +324,9 @@ export function RoomPage() {
       if (timerRef.current) clearInterval(timerRef.current);
       clearTimeout(fallbackTimer);
     };
-  }, [sessionId, handleServerEvent, playAudioBytes]);
+  }, [sessionId, topicIdProp, isWorldMode, handleServerEvent, playAudioBytes]);
 
-  // ─── Start mic when entering AMBIENT for the first time ────────────────────
-  useEffect(() => {
-    if (roomState === 'AMBIENT' && !micInitRef.current) {
-      micInitRef.current = true;
-      startMic().then((source) => {
-        attachVAD(source);
-
-        // Also start MediaRecorder for sending audio over WebSocket
-        const stream = source.mediaStream || (source as any).mediaStream;
-        if (stream && wsRef.current) {
-          try {
-            const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-            mediaRecorderRef.current = recorder;
-            recorder.ondataavailable = (e) => {
-              if (e.data.size > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
-                e.data.arrayBuffer().then((buf) => {
-                  wsRef.current?.send(buf);
-                });
-              }
-            };
-            recorder.start(500);
-            wsRef.current.send(JSON.stringify({ type: 'mic_active', active: true }));
-          } catch {
-            console.warn('MediaRecorder not available');
-          }
-        }
-      }).catch((err) => {
-        console.warn('Mic access denied:', err);
-      });
-    }
-  }, [roomState, startMic, attachVAD]);
-
-  // ─── Silence timer ─────────────────────────────────────────────────────────
+  // ─── Silence timer ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (roomState === 'AMBIENT') {
       silenceIntervalRef.current = setInterval(() => {
@@ -262,42 +350,40 @@ export function RoomPage() {
     };
   }, [roomState]);
 
-  // ─── Cleanup on unmount ────────────────────────────────────────────────────
-  useEffect(() => {
-    return () => {
-      detachVAD();
-      stopMic();
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-        mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
-      }
-    };
-  }, [detachVAD, stopMic]);
-
-  // ─── End session handler ───────────────────────────────────────────────────
+  // ─── End session handler ────────────────────────────────────────────────────
   const handleEndSession = async () => {
     setShowEndModal(false);
     roomEvents.emitSessionEnd();
 
-    // Stop recording
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
+    if (isWorldMode) {
+      roomManagerRef.current?.stopRecording();
+      roomManagerRef.current?.dispose();
+      navigate('/');
+      return;
     }
 
-    // Notify backend
     wsRef.current?.send(JSON.stringify({ type: 'end_session' }));
     try {
       await sessionsApi.end(sessionId!);
     } catch {}
-
     setTimeout(() => navigate(`/session/${sessionId}/debrief`), 800);
   };
 
-  // ─── Mic toggle ────────────────────────────────────────────────────────────
+  // ─── Mic toggle ─────────────────────────────────────────────────────────────
   const handleMicToggle = () => {
     const newMuted = !micMuted;
     setMicMuted(newMuted);
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+
+    if (isWorldMode) {
+      if (newMuted) {
+        roomManagerRef.current?.stopRecording();
+        useRoomStore.getState().setMicActive(false);
+      } else {
+        roomManagerRef.current?.startRecording().then(() => {
+          useRoomStore.getState().setMicActive(true);
+        });
+      }
+    } else if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'mic_active', active: !newMuted }));
     }
   };
@@ -306,8 +392,38 @@ export function RoomPage() {
 
   return (
     <div className={`room-page${isEnding ? ' ending' : ''}`}>
-      {/* Layer 0: Scene */}
-      <SceneCanvas />
+      {/* Layer 0: 3D Scene */}
+      <SceneCanvas
+        onReady={handleSceneReady}
+        onError={handleSceneError}
+        onProgress={handleSceneProgress}
+      />
+
+      {/* Loading overlay for 3D scene */}
+      {sceneLoading && (
+        <div className="scene-loading-overlay">
+          <div className="scene-loading-content">
+            <div className="scene-loading-spinner" />
+            <p className="scene-loading-text">{loadingStage}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error overlay */}
+      {sceneError && (
+        <div className="scene-loading-overlay">
+          <div className="scene-loading-content">
+            <p style={{ color: '#f97316', marginBottom: '12px' }}>Failed to load 3D scene</p>
+            <p style={{ color: '#6B6B6B', fontSize: '12px' }}>{sceneError}</p>
+            <button
+              onClick={() => window.location.reload()}
+              style={{ marginTop: '16px', padding: '8px 20px', background: '#fff', color: '#000', border: 'none', cursor: 'pointer', fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase' }}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Layer 1: All UI overlays */}
       <TopBarOverlay

@@ -1,6 +1,6 @@
 import { useRef, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { topicsApi, generateApi } from '../services/api';
+import { topicsApi, generateApi, studioApi } from '../services/api';
 import { Navbar } from '../components/Navbar';
 import { useDebounce } from '../hooks/useDebounce';
 import { analyzeBrief } from '../lib/brief-analyzer';
