@@ -69,7 +69,7 @@ const SEED_WORLDS: World[] = [
         relationshipToLearner: 'peer'
       }
     ],
-    createdAt: new Date().toISOString()
+    createdAt: '2026-01-01T00:00:00.000Z'
   },
   {
     id: 'seed-2',
@@ -115,7 +115,7 @@ const SEED_WORLDS: World[] = [
         relationshipToLearner: 'stranger'
       }
     ],
-    createdAt: new Date().toISOString()
+    createdAt: '2026-01-01T00:00:00.000Z'
   },
   {
     id: 'seed-3',
@@ -161,7 +161,7 @@ const SEED_WORLDS: World[] = [
         relationshipToLearner: 'authority'
       }
     ],
-    createdAt: new Date().toISOString()
+    createdAt: '2026-01-01T00:00:00.000Z'
   },
   {
     id: 'seed-4',
@@ -207,7 +207,7 @@ const SEED_WORLDS: World[] = [
         relationshipToLearner: 'peer'
       }
     ],
-    createdAt: new Date().toISOString()
+    createdAt: '2026-01-01T00:00:00.000Z'
   }
 ];
 
