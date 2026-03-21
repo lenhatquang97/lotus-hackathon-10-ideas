@@ -18,6 +18,15 @@ const envLabels: Record<string, string> = {
   apartment: 'Apartment',
 };
 
+const cefrToDifficulty: Record<string, string> = {
+  A1: 'Beginner',
+  A2: 'Beginner',
+  B1: 'Intermediate',
+  B2: 'Intermediate',
+  C1: 'Advanced',
+  C2: 'Advanced',
+};
+
 export function WorldCard({ world }: { world: World }) {
   return (
     <Link href={`/world/${world.id}`} className="block group">
@@ -79,7 +88,7 @@ export function WorldCard({ world }: { world: World }) {
               color: 'var(--color-ash)',
             }}
           >
-            {world.cefrLevel}
+            {cefrToDifficulty[world.cefrLevel] || world.cefrLevel}
           </span>
         </div>
       </div>

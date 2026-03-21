@@ -14,12 +14,11 @@ const domains: { value: Domain | 'all'; label: string }[] = [
   { value: 'daily-life', label: 'Daily Life' },
 ];
 
-const levels: { value: CefrLevel | 'all'; label: string }[] = [
+const levels: { value: 'beginner' | 'intermediate' | 'advanced' | 'all'; label: string }[] = [
   { value: 'all', label: 'All' },
-  { value: 'A2', label: 'A2' },
-  { value: 'B1', label: 'B1' },
-  { value: 'B2', label: 'B2' },
-  { value: 'C1', label: 'C1' },
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced', label: 'Advanced' },
 ];
 
 function FilterButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
@@ -50,10 +49,14 @@ function FilterButton({ active, onClick, children }: { active: boolean; onClick:
 export function WorldGrid() {
   const { worlds } = useWorldStore();
   const [domainFilter, setDomainFilter] = useState<Domain | 'all'>('all');
-  const [levelFilter, setLevelFilter] = useState<CefrLevel | 'all'>('all');
+  const [levelFilter, setLevelFilter] = useState<'beginner' | 'intermediate' | 'advanced' | 'all'>('all');
   const filtered = worlds.filter(w => {
     if (domainFilter !== 'all' && w.domain !== domainFilter) return false;
-    if (levelFilter !== 'all' && w.cefrLevel !== levelFilter) return false;
+    if (levelFilter !== 'all') {
+      if (levelFilter === 'beginner' && !['A1', 'A2'].includes(w.cefrLevel)) return false;
+      if (levelFilter === 'intermediate' && !['B1', 'B2'].includes(w.cefrLevel)) return false;
+      if (levelFilter === 'advanced' && !['C1', 'C2'].includes(w.cefrLevel)) return false;
+    }
     return true;
   });
 
