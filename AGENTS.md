@@ -1,5 +1,8 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+## Engineering Principles
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+- DRY (Don't Repeat Yourself)
+- YAGNI (You Aren't Gonna Need It)
+- KISS (Keep It Simple, Stupid)
+- "Premature optimization is the root of all evil"
+- Startup speed over over-engineering. Keep architecture decent and secure, but pragmatic.
+- Search the web aggressively for latest upstream docs and best practices

@@ -1,0 +1,18 @@
+personas:
+  - id: "john"
+    file: "personas/john.md"
+    name: "John"
+    summary: "Mid-level marketing specialist, reliable and measured"
+
+  - id: "alice"
+    file: "personas/alice.md"
+    name: "Alice"
+    summary: "Head of Marketing & Sales, senior executive, firm but fair"
+
+scripts:
+  - id: "salary_negotiation"
+    file: "scripts/salary_negotiation.yaml"
+    title: "Salary Negotiation"
+    persona_a: "john"
+    persona_b: "alice"
+    topic_category: "workplace"

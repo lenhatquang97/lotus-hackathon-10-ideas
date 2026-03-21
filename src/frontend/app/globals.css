@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0c0a14;
+  --foreground: #f0eef5;
+  --vibe-purple: #a855f7;
+  --vibe-teal: #06b6d4;
+  --vibe-orange: #f97316;
+  --vibe-yellow: #fbbf24;
+  --vibe-green: #84cc16;
+  --vibe-pink: #ec4899;
+  --glass-bg: rgba(15, 10, 30, 0.65);
+  --glass-border: rgba(168, 85, 247, 0.25);
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* Neon glow keyframes */
+@keyframes neon-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(168, 85, 247, 0.4), 0 0 24px rgba(168, 85, 247, 0.15); }
+  50% { box-shadow: 0 0 16px rgba(168, 85, 247, 0.6), 0 0 40px rgba(168, 85, 247, 0.25); }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin-glow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Glass card base */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+}
+
+/* Neon border gradient */
+.neon-border {
+  position: relative;
+}
+.neon-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 17px;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--vibe-purple), var(--vibe-teal), var(--vibe-orange));
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Scrollbar styling */
+.vibe-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.vibe-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.vibe-scroll::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.3);
+  border-radius: 4px;
+}
+.vibe-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.5);
+}
+
+/* Transcript message animation */
+.transcript-msg {
+  animation: fade-in-up 0.3s ease-out;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
