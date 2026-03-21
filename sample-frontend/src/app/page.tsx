@@ -1,7 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { WorldGrid } from '@/components/catalog/WorldGrid';
+import dynamic from 'next/dynamic';
+
+const WorldGrid = dynamic(
+  () => import('@/components/catalog/WorldGrid').then(m => ({ default: m.WorldGrid })),
+  { ssr: false }
+);
 
 export default function HomePage() {
   return (

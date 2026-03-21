@@ -51,7 +51,6 @@ export function WorldGrid() {
   const { worlds } = useWorldStore();
   const [domainFilter, setDomainFilter] = useState<Domain | 'all'>('all');
   const [levelFilter, setLevelFilter] = useState<CefrLevel | 'all'>('all');
-
   const filtered = worlds.filter(w => {
     if (domainFilter !== 'all' && w.domain !== domainFilter) return false;
     if (levelFilter !== 'all' && w.cefrLevel !== levelFilter) return false;
