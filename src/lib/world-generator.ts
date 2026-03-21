@@ -1,4 +1,29 @@
-import type { World } from './types';
+import type { World, Difficulty, CefrLevel, KnowledgeItem } from './types';
+
+export const DIFFICULTY_TO_CEFR: Record<Difficulty, CefrLevel> = {
+  beginner: 'A2',
+  intermediate: 'B1',
+  advanced: 'C1',
+};
+
+export function buildExtendedPrompt(
+  brief: string,
+  knowledgeItems: KnowledgeItem[],
+  difficulty: Difficulty
+): { systemPrompt: string; userMessage: string } {
+  const cefrLevel = DIFFICULTY_TO_CEFR[difficulty];
+  const systemPrompt = WORLD_GENERATION_PROMPT + `\n\nIMPORTANT: Target CEFR level ${cefrLevel} for this world.`;
+
+  let userMessage = brief;
+  const textItems = knowledgeItems.filter((i) => i.content);
+  if (textItems.length > 0) {
+    userMessage +=
+      '\n\nAdditional context provided by the creator:\n' +
+      textItems.map((i) => `- ${i.content}`).join('\n');
+  }
+
+  return { systemPrompt, userMessage };
+}
 
 export const WORLD_GENERATION_PROMPT = `You are a world-building AI for an English language learning platform. Given a user's prompt describing a scenario, generate a complete world configuration for immersive English conversation practice.
 

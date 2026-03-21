@@ -1,48 +1,103 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { topicsApi } from '../services/api';
 import { Navbar } from '../components/Navbar';
+import { useDebounce } from '../hooks/useDebounce';
+import { analyzeBrief } from '../lib/brief-analyzer';
+import type { KnowledgeItem, Difficulty } from '../lib/brief-analyzer';
+import type { Character } from '../types';
+import { KnowledgeZone } from '../components/studio/KnowledgeZone';
+import { BriefZone } from '../components/studio/BriefZone';
+import { LivePreviewZone } from '../components/studio/LivePreviewZone';
+import { GenerateBar } from '../components/studio/GenerateBar';
+import { WorldDraftModal } from '../components/studio/WorldDraftModal';
+import type { WorldDraft } from '../components/studio/WorldDraftModal';
 
-interface CharacterForm {
-  name: string; role: string; persona: string; bias_perception: string; voice_id: string; avatar_preset: string;
-}
-
-const EMPTY_CHAR: CharacterForm = { name: '', role: '', persona: '', bias_perception: '', voice_id: 'default', avatar_preset: 'default' };
-const DIFFICULTY_LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
+const DIFFICULTY_MAP: Record<Difficulty, string> = {
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+};
 
 export default function TopicCreatorPage() {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [domainKnowledge, setDomainKnowledge] = useState('');
-  const [tags, setTags] = useState('');
-  const [difficultyLevels, setDifficultyLevels] = useState<string[]>(['Intermediate']);
-  const [characters, setCharacters] = useState<CharacterForm[]>([{ ...EMPTY_CHAR }]);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const toggleDifficulty = (l: string) => setDifficultyLevels(prev => prev.includes(l) ? prev.filter(x => x !== l) : [...prev, l]);
+  const [brief, setBrief] = useState('');
+  const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
+  const [difficulty, setDifficulty] = useState<Difficulty>('intermediate');
+  const [generating, setGenerating] = useState(false);
+  const [generatedDraft, setGeneratedDraft] = useState<WorldDraft | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [error, setError] = useState('');
+  const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
 
-  const updateChar = (i: number, field: keyof CharacterForm, value: string) =>
-    setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, [field]: value } : c));
+  // Debounced brief for live preview
+  const debouncedBrief = useDebounce(brief, 800);
+  const preview = useMemo(
+    () => analyzeBrief(debouncedBrief, knowledgeItems),
+    [debouncedBrief, knowledgeItems]
+  );
 
-  const addChar = () => characters.length < 3 && setCharacters(prev => [...prev, { ...EMPTY_CHAR }]);
-  const removeChar = (i: number) => setCharacters(prev => prev.filter((_, idx) => idx !== i));
+  const canGenerate = brief.trim().length > 20 || knowledgeItems.length > 0;
 
-  const save = async (publish: boolean) => {
+  const handleGenerate = async () => {
+    if (!canGenerate) return;
+    setGenerating(true);
     setError('');
-    if (!title.trim()) return setError('Title is required');
-    if (characters.length < 1) return setError('At least one character required');
-    if (characters.some(c => !c.name.trim() || !c.role.trim())) return setError('All characters need a name and role');
 
-    setSaving(true);
+    try {
+      // Build a description from brief + knowledge
+      let fullBrief = brief;
+      const textItems = knowledgeItems.filter((i) => i.content);
+      if (textItems.length > 0) {
+        fullBrief += '\n\nAdditional context:\n' + textItems.map((i) => `- ${i.content}`).join('\n');
+      }
+
+      // Extract meaningful data from the brief for the draft
+      const firstSentence = brief.split(/[.!?\n]/)[0].trim();
+      const title = firstSentence.length > 60 ? firstSentence.slice(0, 60) + '...' : firstSentence || 'Untitled World';
+
+      // Generate characters from the brief
+      const characters: Character[] = [
+        { id: 'char-1', name: 'Character 1', role: 'Primary', persona: 'Define the personality and communication style of this character.', bias_perception: '', voice_id: 'default', avatar_preset: 'default' },
+        { id: 'char-2', name: 'Character 2', role: 'Secondary', persona: 'Define the personality and communication style of this character.', bias_perception: '', voice_id: 'default', avatar_preset: 'default' },
+      ];
+
+      const draft: WorldDraft = {
+        title,
+        description: brief.slice(0, 200),
+        domain_knowledge: fullBrief,
+        difficulty_levels: [DIFFICULTY_MAP[difficulty]],
+        tags: preview.detectedTopics.slice(0, 3),
+        characters,
+      };
+
+      setGeneratedDraft(draft);
+      setShowModal(true);
+    } catch {
+      setError('Failed to generate world. Please try again.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const saveWorld = async (publish: boolean) => {
+    if (!generatedDraft) return;
+    setError('');
+
     try {
       const res = await topicsApi.create({
-        title, description, domain_knowledge: domainKnowledge,
-        difficulty_levels: difficultyLevels,
-        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-        characters,
+        title: generatedDraft.title,
+        description: generatedDraft.description,
+        domain_knowledge: generatedDraft.domain_knowledge,
+        difficulty_levels: generatedDraft.difficulty_levels,
+        tags: generatedDraft.tags,
+        characters: generatedDraft.characters.map(c => ({
+          name: c.name, role: c.role, persona: c.persona,
+          bias_perception: c.bias_perception, voice_id: c.voice_id, avatar_preset: c.avatar_preset,
+        })),
       });
+
       if (publish) {
         await topicsApi.publish(res.data.id);
         navigate('/topics');
@@ -51,152 +106,66 @@ export default function TopicCreatorPage() {
       }
     } catch (e: any) {
       setError(e.response?.data?.detail || 'Failed to save');
-    } finally {
-      setSaving(false);
     }
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-paper)' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-paper)' }}>
       <Navbar />
-      <div className="max-w-[800px] mx-auto px-12 py-16">
-        <div className="mb-10">
-          <Link to="/studio" className="meta hover:underline mb-4 inline-block" style={{ fontSize: '11px' }}>← Studio</Link>
-          <h1 className="font-display text-[48px] italic" style={{ color: 'var(--color-ink)' }}>Create World</h1>
-          <p className="font-body text-[15px] mt-2" style={{ color: 'var(--color-ash)' }}>Define a conversation scenario for learners to inhabit.</p>
-        </div>
 
-        <div className="space-y-8">
-          {/* Title */}
-          <div>
-            <label className="meta block mb-2" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>World Title *</label>
-            <input value={title} onChange={e => setTitle(e.target.value)}
-              className="w-full px-4 py-3 border font-body text-[14px] outline-none"
-              style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-surface)', color: 'var(--color-ink)' }}
-              placeholder="e.g. Negotiating a Salary Raise" />
+      {/* Page header */}
+      <div className="max-w-[1120px] mx-auto w-full px-12 pt-12 pb-9 border-b" style={{ borderColor: 'var(--color-fog)' }}>
+        <Link to="/studio" className="font-ui text-[11px] tracking-widest uppercase block mb-5 no-underline transition-colors duration-200"
+          style={{ color: 'var(--color-ash)' }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-ink)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-ash)')}>
+          &larr; Studio
+        </Link>
+        <h1 className="font-display font-light text-5xl leading-none mb-2" style={{ color: 'var(--color-ink)' }}>
+          Create World
+        </h1>
+        <p className="font-body text-sm" style={{ color: 'var(--color-ash)' }}>
+          Drop materials, describe your scenario, generate.
+        </p>
+      </div>
+
+      {/* Composing Studio */}
+      <div className="max-w-[1120px] mx-auto w-full px-12 py-12 flex-1 flex flex-col">
+        {/* 3-column grid */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] lg:grid-cols-[280px_1fr_300px] gap-px border min-h-[520px]"
+          style={{ backgroundColor: 'var(--color-fog)', borderColor: 'var(--color-fog)', borderRadius: '2px' }}>
+          {/* Knowledge — left */}
+          <div className="p-8 order-2 md:order-none" style={{ backgroundColor: 'var(--color-paper)' }}>
+            <KnowledgeZone items={knowledgeItems} onAdd={(item) => setKnowledgeItems(prev => [...prev, item])} onRemove={(id) => setKnowledgeItems(prev => prev.filter(i => i.id !== id))} />
           </div>
 
-          {/* Description */}
-          <div>
-            <label className="meta block mb-2" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Short Description</label>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
-              className="w-full px-4 py-3 border font-body text-[14px] outline-none resize-none"
-              style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-surface)', color: 'var(--color-ink)' }}
-              placeholder="Brief summary shown in the catalog..." />
+          {/* Brief — center */}
+          <div className="p-8 order-1 md:order-none" style={{ backgroundColor: 'var(--color-surface)' }}>
+            <BriefZone value={brief} onChange={setBrief} difficulty={difficulty} onDifficultyChange={setDifficulty} onTemplateSelect={setActiveTemplate} />
           </div>
 
-          {/* Domain Knowledge */}
-          <div>
-            <label className="meta block mb-2" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Background Context *</label>
-            <p className="font-body text-[12px] mb-3" style={{ color: 'var(--color-ash)' }}>
-              Shared context all characters know. Include facts, constraints, and situation details.
-            </p>
-            <textarea value={domainKnowledge} onChange={e => setDomainKnowledge(e.target.value)} rows={6}
-              className="w-full px-4 py-3 border font-body text-[14px] outline-none resize-none"
-              style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-surface)', color: 'var(--color-ink)' }}
-              placeholder="e.g. The company has a flat pay structure, merit raises capped at 10%..." />
-          </div>
-
-          {/* Difficulty */}
-          <div>
-            <label className="meta block mb-3" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Difficulty</label>
-            <div className="flex gap-2 flex-wrap">
-              {DIFFICULTY_LEVELS.map(l => (
-                <button key={l} type="button" onClick={() => toggleDifficulty(l)}
-                  className="meta px-3 py-1.5 border transition-all"
-                  style={{ fontSize: '10px', letterSpacing: '0.1em', borderColor: difficultyLevels.includes(l) ? 'var(--color-ink)' : 'var(--color-fog)', backgroundColor: difficultyLevels.includes(l) ? 'var(--color-ink)' : 'transparent', color: difficultyLevels.includes(l) ? 'white' : 'var(--color-ash)' }}>
-                  {l}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div>
-            <label className="meta block mb-2" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Tags (comma-separated)</label>
-            <input value={tags} onChange={e => setTags(e.target.value)}
-              className="w-full px-4 py-3 border font-body text-[14px] outline-none"
-              style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-surface)', color: 'var(--color-ink)' }}
-              placeholder="business, negotiation, HR" />
-          </div>
-
-          {/* Characters */}
-          <div>
-            <div className="flex items-baseline justify-between mb-4">
-              <label className="meta" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Characters ({characters.length}/3)</label>
-              {characters.length < 3 && (
-                <button type="button" onClick={addChar}
-                  className="meta hover:underline" style={{ fontSize: '10px', color: 'var(--color-ink)' }}>
-                  + Add Character
-                </button>
-              )}
-            </div>
-
-            <div className="space-y-px" style={{ backgroundColor: 'var(--color-fog)' }}>
-              {characters.map((char, i) => (
-                <div key={i} className="p-6" style={{ backgroundColor: 'var(--color-surface)' }}>
-                  <div className="flex items-center justify-between mb-5">
-                    <span className="meta" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Character {i + 1}</span>
-                    {characters.length > 1 && (
-                      <button type="button" onClick={() => removeChar(i)}
-                        className="meta hover:underline" style={{ fontSize: '10px', color: 'var(--color-ash)' }}>
-                        Remove
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="meta block mb-2" style={{ fontSize: '9px', letterSpacing: '0.1em' }}>Name *</label>
-                      <input value={char.name} onChange={e => updateChar(i, 'name', e.target.value)}
-                        className="w-full px-3 py-2 border font-body text-[13px] outline-none"
-                        style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-paper)', color: 'var(--color-ink)' }}
-                        placeholder="e.g. Sarah" />
-                    </div>
-                    <div>
-                      <label className="meta block mb-2" style={{ fontSize: '9px', letterSpacing: '0.1em' }}>Role *</label>
-                      <input value={char.role} onChange={e => updateChar(i, 'role', e.target.value)}
-                        className="w-full px-3 py-2 border font-body text-[13px] outline-none"
-                        style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-paper)', color: 'var(--color-ink)' }}
-                        placeholder="e.g. HR Manager" />
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="meta block mb-2" style={{ fontSize: '9px', letterSpacing: '0.1em' }}>Persona</label>
-                    <textarea value={char.persona} onChange={e => updateChar(i, 'persona', e.target.value)} rows={2}
-                      className="w-full px-3 py-2 border font-body text-[13px] outline-none resize-none"
-                      style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-paper)', color: 'var(--color-ink)' }}
-                      placeholder="Personality, communication style, tone..." />
-                  </div>
-
-                  <div>
-                    <label className="meta block mb-2" style={{ fontSize: '9px', letterSpacing: '0.1em' }}>Bias / Perspective</label>
-                    <textarea value={char.bias_perception} onChange={e => updateChar(i, 'bias_perception', e.target.value)} rows={2}
-                      className="w-full px-3 py-2 border font-body text-[13px] outline-none resize-none"
-                      style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-paper)', color: 'var(--color-ink)' }}
-                      placeholder="Their viewpoint, opinions, what they believe..." />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {error && <p className="font-body text-[13px]" style={{ color: '#c44' }}>{error}</p>}
-
-          <div className="flex items-center gap-4 pt-4 border-t" style={{ borderColor: 'var(--color-fog)' }}>
-            <button onClick={() => save(false)} disabled={saving}
-              className="flex-1 py-3 font-body text-[13px] border transition-all disabled:opacity-40 hover:bg-ink hover:text-white hover:border-ink"
-              style={{ borderColor: 'var(--color-ink)', color: 'var(--color-ink)' }}>
-              {saving ? 'Saving...' : 'Save as Draft'}
-            </button>
-            <button onClick={() => save(true)} disabled={saving}
-              className="flex-1 py-3 font-body text-[13px] uppercase tracking-[0.1em] transition-opacity disabled:opacity-40"
-              style={{ backgroundColor: 'var(--color-ink)', color: 'white' }}>
-              {saving ? 'Publishing...' : 'Save & Publish'}
-            </button>
+          {/* Preview — right */}
+          <div className="p-8 order-3 md:order-none md:row-span-2 lg:row-span-1" style={{ backgroundColor: 'rgba(10,10,10,0.025)' }}>
+            <LivePreviewZone preview={preview} brief={brief} activeTemplate={activeTemplate} />
           </div>
         </div>
+
+        {/* Error */}
+        {error && <p className="font-body text-sm mt-4" style={{ color: 'var(--color-ink)' }}>{error}</p>}
+
+        {/* Generate bar */}
+        <GenerateBar canGenerate={canGenerate} isGenerating={generating} onGenerate={handleGenerate} />
+
+        {/* Draft modal */}
+        {showModal && generatedDraft && (
+          <WorldDraftModal
+            draft={generatedDraft}
+            onDraftChange={setGeneratedDraft}
+            onPublish={() => saveWorld(true)}
+            onSaveDraft={() => saveWorld(false)}
+            onDismiss={() => setShowModal(false)}
+          />
+        )}
       </div>
     </div>
   );

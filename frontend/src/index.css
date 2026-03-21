@@ -52,3 +52,155 @@
 .animate-hero-2 { animation: fadeUpSoft 500ms ease-out 120ms both; }
 .animate-hero-3 { animation: fadeUpSoft 500ms ease-out 240ms both; }
 .animate-hero-4 { animation: fadeUpSoft 500ms ease-out 360ms both; }
+
+/* Composing Studio animations */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scrimIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.25; }
+}
+@keyframes blinkStatus {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.animate-slide-up { animation: slideUp 280ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-scrim-in { animation: scrimIn 240ms ease both; }
+.animate-skeleton { animation: skeletonPulse 1.4s ease-in-out infinite; }
+.animate-blink { animation: blinkStatus 1.2s ease-in-out infinite; }
+
+.animate-stagger-1 { animation: fadeUp 180ms ease-out 0ms both; }
+.animate-stagger-2 { animation: fadeUp 180ms ease-out 60ms both; }
+.animate-stagger-3 { animation: fadeUp 180ms ease-out 120ms both; }
+.animate-stagger-4 { animation: fadeUp 180ms ease-out 180ms both; }
+.animate-stagger-5 { animation: fadeUp 180ms ease-out 240ms both; }
+
+/* ── CatalogCard ── */
+.catalog-card-wrap { display: flex; flex-direction: column; gap: 20px; }
+
+.catalog-card {
+  border: 1px solid var(--color-fog);
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--color-surface);
+  position: relative;
+  cursor: default;
+  transition: background 220ms ease, border-color 220ms ease;
+}
+.catalog-card:hover { background: var(--color-ink); border-color: var(--color-ink); }
+.catalog-card:hover .card-title,
+.catalog-card:hover .card-scenario,
+.catalog-card:hover .agent-names-text { color: #FFFFFF; }
+.catalog-card:hover .card-setting-chip,
+.catalog-card:hover .card-tag { border-color: rgba(255,255,255,0.2); color: rgba(255,255,255,0.6); }
+.catalog-card:hover .card-meta-row span { color: rgba(255,255,255,0.5); }
+.catalog-card:hover .card-divider { background: rgba(255,255,255,0.1); }
+.catalog-card:hover .card-catalog-label { color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1); }
+
+.card-scene { height: 160px; position: relative; overflow: hidden; background: #f0efed; }
+.card-scene-empty { width: 100%; height: 100%; background: var(--color-paper); }
+
+.card-difficulty-stripe {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 28px;
+  background: rgba(247,246,244,0.92); backdrop-filter: blur(2px);
+  display: flex; align-items: center; padding: 0 16px;
+  border-top: 1px solid var(--color-fog);
+}
+.card-difficulty-text {
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-ash);
+}
+
+.card-body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 10px; }
+.card-meta-row { display: flex; gap: 16px; }
+.card-agent-count, .card-duration {
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-ash);
+  transition: color 220ms ease;
+}
+
+.card-title {
+  font-family: var(--font-display); font-weight: 300; font-size: 26px;
+  line-height: 1.1; color: var(--color-ink); margin: 0; min-height: 32px;
+  transition: color 220ms ease;
+}
+.card-title-skeleton {
+  display: block; height: 26px; width: 70%;
+  background: var(--color-fog); border-radius: 2px;
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+.card-setting-chip {
+  font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.14em;
+  color: var(--color-ash); border: 1px solid var(--color-fog); border-radius: 2px;
+  padding: 3px 8px; width: fit-content; transition: border-color 220ms ease, color 220ms ease;
+}
+
+.card-scenario {
+  font-family: var(--font-body); font-size: 12px; line-height: 1.6;
+  color: var(--color-ash); margin: 0; transition: color 220ms ease;
+}
+
+.card-divider { height: 1px; background: var(--color-fog); transition: background 220ms ease; }
+
+.card-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.card-tag {
+  font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.10em;
+  text-transform: uppercase; color: var(--color-ash);
+  border: 1px solid var(--color-fog); border-radius: 2px; padding: 3px 8px;
+  transition: border-color 220ms ease, color 220ms ease;
+}
+
+.card-agent-row { display: flex; align-items: center; gap: 6px; padding-top: 4px; }
+.agent-avatar-stub {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--color-fog); border: 1px solid var(--color-fog); flex-shrink: 0;
+}
+.agent-names-text {
+  font-family: var(--font-body); font-size: 11px; color: var(--color-ash);
+  transition: color 220ms ease;
+}
+
+.card-catalog-label {
+  text-align: center; padding: 8px;
+  font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.12em;
+  color: var(--color-ash); border-top: 1px solid var(--color-fog);
+  transition: color 220ms ease, border-color 220ms ease;
+}
+
+/* Below card */
+.preview-below-section { display: flex; flex-direction: column; gap: 8px; }
+.preview-below-label {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--color-ash);
+  padding-bottom: 8px; border-bottom: 1px solid var(--color-fog);
+}
+
+.vocab-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.vocab-pill {
+  font-family: var(--font-body); font-size: 12px; font-style: italic;
+  color: var(--color-ink); background: var(--color-surface);
+  border: 1px solid var(--color-fog); border-radius: 2px; padding: 4px 10px;
+  transition: border-color 220ms ease;
+}
+.vocab-pill:hover { border-color: var(--color-ash); }
+
+.confidence-track { height: 3px; background: var(--color-fog); border-radius: 2px; overflow: hidden; }
+.confidence-fill {
+  height: 100%; background: var(--color-ink); border-radius: 2px;
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.confidence-hint { font-family: var(--font-body); font-size: 11px; color: var(--color-ash); line-height: 1.4; margin: 0; }
+
+/* Scene transition */
+@keyframes sceneTransition {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.scene-svg { animation: sceneTransition 300ms ease forwards; }

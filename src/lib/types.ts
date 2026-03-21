@@ -75,3 +75,44 @@ export interface SessionResult {
   evaluation: Evaluation;
   completedAt: string;
 }
+
+// ── Composing Studio types ──
+
+export type KnowledgeItemType = 'file' | 'url' | 'text';
+
+export interface KnowledgeItem {
+  id: string;
+  type: KnowledgeItemType;
+  name: string;
+  content: string;
+  status: 'ready' | 'processing';
+  meta?: {
+    fileName?: string;
+    fileSize?: number;
+    fileType?: string;
+    url?: string;
+  };
+}
+
+export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
+
+export interface BriefPreview {
+  status: 'empty' | 'reading' | 'partial' | 'ready';
+  suggestedTitle: string;
+  setting: string;
+  scenario: string;
+  detectedTopics: string[];
+  suggestedCharacterCount: number;
+  suggestedDifficulty: string;
+  vocabularyHints: string[];
+  scenarioSummary: string;
+  suggestedAgentNames: string[];
+  estimatedDurationMin: number;
+  confidence: number;
+}
+
+export interface GenerateWorldRequest {
+  brief: string;
+  knowledgeItems: KnowledgeItem[];
+  difficulty: Difficulty;
+}
