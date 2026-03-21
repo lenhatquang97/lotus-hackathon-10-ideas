@@ -48,4 +48,21 @@ export const sessionsApi = {
     api.get('/api/v1/sessions/history', { params }),
 };
 
+// Studio (AI generation)
+export const studioApi = {
+  generateCharacters: (data: {
+    title: string;
+    description: string;
+    domain_knowledge: string;
+    num_characters: number;
+    cefr_levels: string[];
+    tags: string[];
+  }) => api.post('/api/v1/studio/generate-characters', data),
+  generateConversation: (data: {
+    title: string;
+    domain_knowledge: string;
+    characters: unknown[];
+  }) => api.post('/api/v1/studio/generate-conversation', data),
+};
+
 export default api;

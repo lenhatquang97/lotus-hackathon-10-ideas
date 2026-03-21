@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.db.mongodb import connect_to_mongo, close_mongo_connection
-from app.api.v1.routes import auth, topics, sessions
+from app.api.v1.routes import auth, topics, sessions, studio
 
 
 @asynccontextmanager
@@ -25,6 +25,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(topics.router, prefix="/api/v1/topics", tags=["topics"])
 app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"])
+app.include_router(studio.router, prefix="/api/v1/studio", tags=["studio"])
 
 
 @app.get("/health")
