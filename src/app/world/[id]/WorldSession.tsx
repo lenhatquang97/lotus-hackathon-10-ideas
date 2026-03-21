@@ -5,16 +5,14 @@ import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { v4 as uuid } from 'uuid';
-import { TranscriptPanel } from '@/components/world/TranscriptPanel';
-import { ConversationHUD } from '@/components/world/ConversationHUD';
 import { useWorldStore } from '@/store/world-store';
 import { useSessionStore } from '@/store/session-store';
 import { connectRealtime, type RealtimeConnection } from '@/lib/realtime';
 import type { AgentPersona } from '@/lib/types';
 
-const Scene3D = dynamic(
-  () => import('@/components/world/Scene3D').then(m => ({ default: m.Scene3D })),
-  { ssr: false, loading: () => <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-ink)' }}><span className="meta text-white/50">Loading scene...</span></div> }
+const RoomPage = dynamic(
+  () => import('@/room/RoomPage').then(m => ({ default: m.RoomPage })),
+  { ssr: false, loading: () => <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#181818' }}><span className="meta text-white/50">Loading room...</span></div> }
 );
 
 type SessionPhase = 'lobby' | 'active' | 'ending';
@@ -54,21 +52,7 @@ export function WorldSession() {
     const firstAgent = world.agents[0];
     startSession(world.id, firstAgent.id);
     setPhase('active');
-
-    try {
-      const conn = await connectRealtime(
-        firstAgent,
-        world.scenarioContext,
-        world.conversationBeats,
-        handleTranscript,
-        setConnected,
-        setSpeaking,
-      );
-      connectionRef.current = conn;
-    } catch (err) {
-      console.error('Failed to connect:', err);
-      setPhase('lobby');
-    }
+    // RoomPage manages its own mock session and real API connection internally
   };
 
   const handleSwitchAgent = (agent: AgentPersona) => {
@@ -241,70 +225,5 @@ export function WorldSession() {
   }
 
   // ACTIVE SESSION
-  return (
-    <div className="flex-1 flex flex-col h-screen">
-      {/* 3D Scene + HUD */}
-      <div className="relative flex-1">
-        <Scene3D
-          environment={world.environment}
-          agents={world.agents}
-          activeAgentId={activeAgentId || world.agents[0].id}
-          isSpeaking={isSpeaking}
-        />
-        <ConversationHUD
-          agentName={activeAgent?.name || ''}
-          agentRole={activeAgent?.role || ''}
-          isConnected={isConnected}
-          isSpeaking={isSpeaking}
-          sessionStartTime={sessionStartTime}
-        />
-
-        {/* Agent switcher */}
-        {world.agents.length > 1 && (
-          <div className="absolute bottom-4 left-4 flex gap-px z-10">
-            {world.agents.map((agent) => (
-              <button
-                key={agent.id}
-                onClick={() => handleSwitchAgent(agent)}
-                className="px-4 py-2 backdrop-blur-sm transition-all duration-200"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '11px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  backgroundColor: agent.id === activeAgentId ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.6)',
-                  color: agent.id === activeAgentId ? 'var(--color-ink)' : 'rgba(255,255,255,0.8)',
-                }}
-              >
-                {agent.name.split(' ')[0]}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* End session button */}
-        <div className="absolute bottom-4 right-4 z-10">
-          <button
-            onClick={handleEndSession}
-            disabled={evaluating}
-            className="px-6 py-2 bg-white/90 backdrop-blur-sm transition-all duration-200 hover:bg-white disabled:opacity-40"
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '11px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              color: 'var(--color-ink)',
-            }}
-          >
-            End Session
-          </button>
-        </div>
-      </div>
-
-      {/* Transcript panel */}
-      <div className="h-48 border-t border-[var(--color-fog)]" style={{ backgroundColor: 'var(--color-surface)' }}>
-        <TranscriptPanel transcript={transcript} />
-      </div>
-    </div>
-  );
+  return <RoomPage />;
 }
