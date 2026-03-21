@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { topicsApi, studioApi } from '../services/api';
 import { Navbar } from '../components/Navbar';
@@ -248,6 +248,38 @@ function StepSetup({
 
   const canGenerate = title.trim() && domainKnowledge.trim();
 
+  // File upload state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
+  const [uploadMsg, setUploadMsg] = useState('');
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadState('uploading');
+    setUploadMsg('');
+    try {
+      const res = await studioApi.extractText(file);
+      const { text, characters, truncated, filename } = res.data;
+      // Append extracted text to existing context (with separator if needed)
+      setDomainKnowledge(
+        domainKnowledge.trim()
+          ? `${domainKnowledge.trim()}\n\n---\n${text}`
+          : text,
+      );
+      setUploadState('done');
+      setUploadMsg(
+        `${filename} — ${characters.toLocaleString()} chars extracted${truncated ? ' (truncated to 20 000)' : ''}`,
+      );
+    } catch (err: any) {
+      setUploadState('error');
+      setUploadMsg(err.response?.data?.detail || 'File extraction failed.');
+    } finally {
+      // Reset so the same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -261,15 +293,68 @@ function StepSetup({
       </div>
 
       <div>
-        <FieldLabel hint="Shared facts all characters know — scenario constraints, key figures, relevant data">
-          Background Context *
-        </FieldLabel>
+        <div className="flex items-end justify-between mb-2">
+          <div className="flex-1">
+            <FieldLabel hint="Shared facts all characters know — scenario constraints, key figures, relevant data">
+              Background Context *
+            </FieldLabel>
+          </div>
+          {/* File upload button */}
+          <div className="flex items-center gap-3 mb-2 ml-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.docx,.txt,.md"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadState === 'uploading'}
+              className="meta flex items-center gap-1.5 px-3 py-1.5 border transition-all disabled:opacity-50"
+              style={{
+                fontSize: '10px',
+                letterSpacing: '0.1em',
+                borderColor: 'var(--color-fog)',
+                color: 'var(--color-ash)',
+                backgroundColor: 'var(--color-surface)',
+              }}
+            >
+              {uploadState === 'uploading' ? (
+                <><Spinner /> Extracting…</>
+              ) : (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M8 1v10M4 5l4-4 4 4M2 13h12" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Import file
+                </>
+              )}
+            </button>
+            <span className="meta" style={{ fontSize: '9px', color: 'var(--color-ash)' }}>PDF · DOCX · TXT</span>
+          </div>
+        </div>
+
         <TextArea
           value={domainKnowledge}
           onChange={setDomainKnowledge}
           rows={7}
           placeholder={`e.g. TechCorp has a flat pay structure. Merit raises are capped at 10% per cycle. The learner joined 2 years ago and received an "Exceeds Expectations" review. Industry benchmarks show them paid 15% below market rate...`}
         />
+
+        {/* Upload feedback */}
+        {uploadMsg && (
+          <p
+            className="meta mt-1.5"
+            style={{
+              fontSize: '10px',
+              color: uploadState === 'error' ? '#c44' : 'var(--color-ash)',
+            }}
+          >
+            {uploadState === 'done' ? '✓ ' : ''}{uploadMsg}
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-8">

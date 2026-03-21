@@ -1,5 +1,6 @@
+import io
 import json
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from pydantic import BaseModel
 from typing import List
 from openai import AsyncOpenAI
@@ -16,6 +17,68 @@ def get_client():
     if _client is None:
         _client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
     return _client
+
+
+MAX_EXTRACT_CHARS = 20_000  # ~5k tokens — keep context manageable
+
+
+@router.post("/extract-text")
+async def extract_text(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Extract plain text from an uploaded PDF, DOCX, or TXT file."""
+    filename = (file.filename or "").lower()
+    content = await file.read()
+
+    if len(content) > 20 * 1024 * 1024:  # 20 MB hard cap
+        raise HTTPException(status_code=413, detail="File too large (max 20 MB)")
+
+    text = ""
+
+    if filename.endswith(".pdf"):
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(io.BytesIO(content))
+            pages = [page.extract_text() or "" for page in reader.pages]
+            text = "\n\n".join(pages)
+        except Exception as e:
+            raise HTTPException(status_code=422, detail=f"Could not parse PDF: {e}")
+
+    elif filename.endswith(".docx"):
+        try:
+            from docx import Document
+            doc = Document(io.BytesIO(content))
+            text = "\n".join(para.text for para in doc.paragraphs if para.text.strip())
+        except Exception as e:
+            raise HTTPException(status_code=422, detail=f"Could not parse DOCX: {e}")
+
+    elif filename.endswith(".txt") or filename.endswith(".md"):
+        try:
+            text = content.decode("utf-8", errors="replace")
+        except Exception as e:
+            raise HTTPException(status_code=422, detail=f"Could not decode text file: {e}")
+
+    else:
+        raise HTTPException(
+            status_code=415,
+            detail="Unsupported file type. Upload a PDF, DOCX, TXT, or MD file.",
+        )
+
+    text = text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="No readable text found in file.")
+
+    # Truncate if needed and report
+    truncated = len(text) > MAX_EXTRACT_CHARS
+    text = text[:MAX_EXTRACT_CHARS]
+
+    return {
+        "text": text,
+        "characters": len(text),
+        "truncated": truncated,
+        "filename": file.filename,
+    }
 
 
 class GenerateCharactersRequest(BaseModel):

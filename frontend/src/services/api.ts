@@ -63,6 +63,15 @@ export const studioApi = {
     domain_knowledge: string;
     characters: unknown[];
   }) => api.post('/api/v1/studio/generate-conversation', data),
+  extractText: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post<{ text: string; characters: number; truncated: boolean; filename: string }>(
+      '/api/v1/studio/extract-text',
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+  },
 };
 
 export default api;
