@@ -20,7 +20,7 @@ export function Navbar() {
         className="font-display italic text-xl"
         style={{ color: 'var(--color-ink)' }}
       >
-        Lotus
+        LotusHack
       </Link>
       <div className="flex items-center gap-6">
         {user ? (
