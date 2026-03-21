@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-ink: #0A0A0A;
+  --color-ash: #6B6B6B;
+  --color-fog: #E8E8E8;
+  --color-paper: #F7F6F4;
+  --color-surface: #FFFFFF;
+  --font-display: 'Cormorant Garamond';
+  --font-body: 'Instrument Sans';
+  --font-mono: 'DM Mono';
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-body), sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+  }
+}
+
+.font-display { font-family: var(--font-display), serif; }
+.font-body { font-family: var(--font-body), sans-serif; }
+.font-ui { font-family: var(--font-mono), monospace; }
+
+.meta {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ash);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeUpSoft {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up { animation: fadeUp 400ms ease-out both; }
+.animate-hero-1 { animation: fadeUpSoft 500ms ease-out 0ms both; }
+.animate-hero-2 { animation: fadeUpSoft 500ms ease-out 120ms both; }
+.animate-hero-3 { animation: fadeUpSoft 500ms ease-out 240ms both; }
+.animate-hero-4 { animation: fadeUpSoft 500ms ease-out 360ms both; }
