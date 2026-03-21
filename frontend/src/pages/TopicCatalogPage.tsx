@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { topicsApi, sessionsApi } from '../services/api';
 import { Navbar } from '../components/Navbar';
 import type { Topic } from '../types';
 
 const DOMAIN_FILTERS = ['All', 'business', 'negotiation', 'healthcare', 'career', 'travel', 'environment'];
-const CEFR_FILTERS = ['All', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+const DIFFICULTY_FILTERS = ['All', 'Beginner', 'Intermediate', 'Advanced'];
 
 function FilterButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -53,7 +53,7 @@ function TopicCard({ topic, onJoin }: { topic: Topic; onJoin: () => void }) {
         <span className="meta transition-colors group-hover:text-white/60" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>
           {topic.play_count} plays
         </span>
-        {topic.cefr_levels.map(l => (
+        {topic.difficulty_levels.map(l => (
           <span key={l} className="meta ml-auto px-2 py-0.5 border transition-colors group-hover:text-white/70 group-hover:border-white/30" style={{ fontSize: '10px', borderColor: 'var(--color-fog)', color: 'var(--color-ash)' }}>
             {l}
           </span>
@@ -67,7 +67,7 @@ export default function TopicCatalogPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [tagFilter, setTagFilter] = useState('All');
-  const [cefrFilter, setCefrFilter] = useState('All');
+  const [difficultyFilter, setDifficultyFilter] = useState('All');
   const [joining, setJoining] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -77,7 +77,7 @@ export default function TopicCatalogPage() {
 
   const filtered = topics.filter(t => {
     if (tagFilter !== 'All' && !t.tags.includes(tagFilter)) return false;
-    if (cefrFilter !== 'All' && !t.cefr_levels.includes(cefrFilter)) return false;
+    if (difficultyFilter !== 'All' && !t.difficulty_levels.includes(difficultyFilter)) return false;
     return true;
   });
 
@@ -95,7 +95,16 @@ export default function TopicCatalogPage() {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-paper)' }}>
       <Navbar />
       <div className="max-w-[1200px] mx-auto px-12 py-16">
-        <h1 className="font-display text-[56px] italic mb-2" style={{ color: 'var(--color-ink)' }}>Available Worlds</h1>
+        <div className="flex items-end justify-between mb-2">
+          <h1 className="font-display text-[56px] italic" style={{ color: 'var(--color-ink)' }}>Available Worlds</h1>
+          <Link
+            to="/studio/topics/create"
+            className="font-body text-[13px] px-5 py-2.5 border transition-all duration-200 hover:bg-ink hover:text-white"
+            style={{ borderColor: 'var(--color-ink)', color: 'var(--color-ink)' }}
+          >
+            + Create World
+          </Link>
+        </div>
         <p className="font-body text-[15px] mb-12" style={{ color: 'var(--color-ash)' }}>
           Choose a conversation scenario to practice.
         </p>
@@ -109,8 +118,8 @@ export default function TopicCatalogPage() {
           </div>
           <div className="w-px h-4 mx-4 flex-shrink-0" style={{ backgroundColor: 'var(--color-fog)' }} />
           <div className="flex items-center ml-auto">
-            {CEFR_FILTERS.map(l => (
-              <FilterButton key={l} active={cefrFilter === l} onClick={() => setCefrFilter(l)}>{l}</FilterButton>
+            {DIFFICULTY_FILTERS.map(l => (
+              <FilterButton key={l} active={difficultyFilter === l} onClick={() => setDifficultyFilter(l)}>{l}</FilterButton>
             ))}
           </div>
         </div>

@@ -26,7 +26,7 @@ class TopicCreate(BaseModel):
     title: str
     description: str
     domain_knowledge: str
-    cefr_levels: List[str] = []
+    difficulty_levels: List[str] = []
     tags: List[str] = []
     characters: List[CharacterCreate]
 
@@ -35,7 +35,7 @@ class TopicUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     domain_knowledge: Optional[str] = None
-    cefr_levels: Optional[List[str]] = None
+    difficulty_levels: Optional[List[str]] = None
     tags: Optional[List[str]] = None
     characters: Optional[List[CharacterCreate]] = None
 
@@ -47,7 +47,7 @@ class TopicResponse(BaseModel):
     description: str
     domain_knowledge: str
     status: str
-    cefr_levels: List[str]
+    difficulty_levels: List[str]
     tags: List[str]
     characters: List[CharacterResponse]
     play_count: int

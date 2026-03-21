@@ -8,20 +8,20 @@ interface CharacterForm {
 }
 
 const EMPTY_CHAR: CharacterForm = { name: '', role: '', persona: '', bias_perception: '', voice_id: 'default', avatar_preset: 'default' };
-const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+const DIFFICULTY_LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
 
 export default function TopicCreatorPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [domainKnowledge, setDomainKnowledge] = useState('');
   const [tags, setTags] = useState('');
-  const [cefrLevels, setCefrLevels] = useState<string[]>(['B2']);
+  const [difficultyLevels, setDifficultyLevels] = useState<string[]>(['Intermediate']);
   const [characters, setCharacters] = useState<CharacterForm[]>([{ ...EMPTY_CHAR }]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const toggleCefr = (l: string) => setCefrLevels(prev => prev.includes(l) ? prev.filter(x => x !== l) : [...prev, l]);
+  const toggleDifficulty = (l: string) => setDifficultyLevels(prev => prev.includes(l) ? prev.filter(x => x !== l) : [...prev, l]);
 
   const updateChar = (i: number, field: keyof CharacterForm, value: string) =>
     setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, [field]: value } : c));
@@ -39,7 +39,7 @@ export default function TopicCreatorPage() {
     try {
       const res = await topicsApi.create({
         title, description, domain_knowledge: domainKnowledge,
-        cefr_levels: cefrLevels,
+        difficulty_levels: difficultyLevels,
         tags: tags.split(',').map(t => t.trim()).filter(Boolean),
         characters,
       });
@@ -97,14 +97,14 @@ export default function TopicCreatorPage() {
               placeholder="e.g. The company has a flat pay structure, merit raises capped at 10%..." />
           </div>
 
-          {/* CEFR */}
+          {/* Difficulty */}
           <div>
-            <label className="meta block mb-3" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>CEFR Levels</label>
+            <label className="meta block mb-3" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Difficulty</label>
             <div className="flex gap-2 flex-wrap">
-              {CEFR_LEVELS.map(l => (
-                <button key={l} type="button" onClick={() => toggleCefr(l)}
+              {DIFFICULTY_LEVELS.map(l => (
+                <button key={l} type="button" onClick={() => toggleDifficulty(l)}
                   className="meta px-3 py-1.5 border transition-all"
-                  style={{ fontSize: '10px', letterSpacing: '0.1em', borderColor: cefrLevels.includes(l) ? 'var(--color-ink)' : 'var(--color-fog)', backgroundColor: cefrLevels.includes(l) ? 'var(--color-ink)' : 'transparent', color: cefrLevels.includes(l) ? 'white' : 'var(--color-ash)' }}>
+                  style={{ fontSize: '10px', letterSpacing: '0.1em', borderColor: difficultyLevels.includes(l) ? 'var(--color-ink)' : 'var(--color-fog)', backgroundColor: difficultyLevels.includes(l) ? 'var(--color-ink)' : 'transparent', color: difficultyLevels.includes(l) ? 'white' : 'var(--color-ash)' }}>
                   {l}
                 </button>
               ))}

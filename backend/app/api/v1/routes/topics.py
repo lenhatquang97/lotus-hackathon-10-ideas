@@ -33,7 +33,7 @@ def _format_topic(topic: dict) -> TopicResponse:
         description=topic.get("description", ""),
         domain_knowledge=topic.get("domain_knowledge", ""),
         status=topic.get("status", "draft"),
-        cefr_levels=topic.get("cefr_levels", []),
+        difficulty_levels=topic.get("difficulty_levels", []),
         tags=topic.get("tags", []),
         characters=chars,
         play_count=topic.get("play_count", 0),
@@ -46,14 +46,14 @@ def _format_topic(topic: dict) -> TopicResponse:
 @router.get("/", response_model=List[TopicResponse])
 async def list_topics(
     tags: Optional[str] = Query(None),
-    cefr: Optional[str] = Query(None),
+    difficulty: Optional[str] = Query(None),
     skip: int = 0,
     limit: int = 20,
 ):
     tag_list = tags.split(",") if tags else None
-    cefr_list = cefr.split(",") if cefr else None
+    difficulty_list = difficulty.split(",") if difficulty else None
     topics = await topic_repo.get_topics(
-        status="published", tags=tag_list, cefr=cefr_list, skip=skip, limit=limit
+        status="published", tags=tag_list, difficulty=difficulty_list, skip=skip, limit=limit
     )
     return [_format_topic(t) for t in topics]
 

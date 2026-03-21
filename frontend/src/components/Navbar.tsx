@@ -32,15 +32,6 @@ export function Navbar() {
             >
               Worlds
             </Link>
-            {user.role === 'creator' && (
-              <Link
-                to="/studio"
-                className="meta hover:text-ink transition-colors"
-                style={{ fontSize: '11px' }}
-              >
-                Studio
-              </Link>
-            )}
             <span className="meta" style={{ fontSize: '11px' }}>
               {user.profile.display_name}
             </span>

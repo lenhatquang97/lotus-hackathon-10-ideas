@@ -27,19 +27,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick actions */}
-        <div className={`grid gap-px mb-12 ${user?.role === 'creator' ? 'grid-cols-2' : 'grid-cols-1 max-w-sm'}`} style={{ backgroundColor: 'var(--color-fog)' }}>
+        <div className="grid gap-px mb-12 grid-cols-1 max-w-sm" style={{ backgroundColor: 'var(--color-fog)' }}>
           <Link to="/topics" className="block p-8 transition-all hover:bg-ink group" style={{ backgroundColor: 'var(--color-surface)' }}>
             <span className="meta block mb-4 group-hover:text-white/60" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>01</span>
             <h3 className="font-display text-[22px] font-semibold mb-2 group-hover:text-white" style={{ color: 'var(--color-ink)' }}>Explore Worlds</h3>
-            <p className="font-body text-[13px] group-hover:text-white/70" style={{ color: 'var(--color-ash)' }}>Browse and join conversation practice scenarios</p>
+            <p className="font-body text-[13px] group-hover:text-white/70" style={{ color: 'var(--color-ash)' }}>Browse, create, and join conversation scenarios</p>
           </Link>
-          {user?.role === 'creator' && (
-            <Link to="/studio" className="block p-8 transition-all hover:bg-ink group" style={{ backgroundColor: 'var(--color-surface)' }}>
-              <span className="meta block mb-4 group-hover:text-white/60" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>02</span>
-              <h3 className="font-display text-[22px] font-semibold mb-2 group-hover:text-white" style={{ color: 'var(--color-ink)' }}>Creator Studio</h3>
-              <p className="font-body text-[13px] group-hover:text-white/70" style={{ color: 'var(--color-ash)' }}>Build and publish your own conversation worlds</p>
-            </Link>
-          )}
         </div>
 
         {/* Recent sessions */}

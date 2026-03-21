@@ -21,7 +21,7 @@ export const authApi = {
 
 // Topics
 export const topicsApi = {
-  list: (params?: { tags?: string; cefr?: string; skip?: number; limit?: number }) =>
+  list: (params?: { tags?: string; difficulty?: string; skip?: number; limit?: number }) =>
     api.get('/api/v1/topics', { params }),
   myTopics: () => api.get('/api/v1/topics/my'),
   get: (id: string) => api.get(`/api/v1/topics/${id}`),

@@ -24,6 +24,9 @@ const instrumentSans = Instrument_Sans({
 export const metadata: Metadata = {
   title: "LotusHack — Immersive English Practice",
   description: "Build and explore immersive worlds for English conversation practice with AI agents",
+  icons: {
+    icon: "/Gemini_Generated_Image_9rn9u49rn9u49rn9.png",
+  },
 };
 
 export default function RootLayout({

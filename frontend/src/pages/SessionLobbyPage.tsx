@@ -49,7 +49,7 @@ export default function SessionLobbyPage() {
           {topic.tags.map(t => (
             <span key={t} className="meta" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>{t.toUpperCase()}</span>
           ))}
-          {topic.cefr_levels.map(l => (
+          {topic.difficulty_levels.map(l => (
             <span key={l} className="meta ml-auto px-2 py-0.5 border" style={{ fontSize: '10px', borderColor: 'var(--color-fog)' }}>{l}</span>
           ))}
         </div>

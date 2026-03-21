@@ -27,7 +27,7 @@ export interface Topic {
   description: string;
   domain_knowledge: string;
   status: 'draft' | 'published';
-  cefr_levels: string[];
+  difficulty_levels: string[];
   tags: string[];
   characters: Character[];
   play_count: number;

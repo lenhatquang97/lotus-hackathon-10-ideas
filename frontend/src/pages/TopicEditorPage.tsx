@@ -7,7 +7,7 @@ interface CharacterForm {
   id?: string; name: string; role: string; persona: string; bias_perception: string; voice_id: string; avatar_preset: string;
 }
 
-const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+const DIFFICULTY_LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
 
 export default function TopicEditorPage() {
   const { topicId } = useParams<{ topicId: string }>();
@@ -15,7 +15,7 @@ export default function TopicEditorPage() {
   const [description, setDescription] = useState('');
   const [domainKnowledge, setDomainKnowledge] = useState('');
   const [tags, setTags] = useState('');
-  const [cefrLevels, setCefrLevels] = useState<string[]>(['B2']);
+  const [difficultyLevels, setDifficultyLevels] = useState<string[]>(['Intermediate']);
   const [characters, setCharacters] = useState<CharacterForm[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -30,7 +30,7 @@ export default function TopicEditorPage() {
       setDescription(t.description);
       setDomainKnowledge(t.domain_knowledge);
       setTags(t.tags.join(', '));
-      setCefrLevels(t.cefr_levels);
+      setDifficultyLevels(t.difficulty_levels);
       setCharacters(t.characters.map((c: any) => ({
         id: c.id, name: c.name, role: c.role, persona: c.persona,
         bias_perception: c.bias_perception, voice_id: c.voice_id || 'default', avatar_preset: c.avatar_preset || 'default'
@@ -39,7 +39,7 @@ export default function TopicEditorPage() {
     });
   }, [topicId]);
 
-  const toggleCefr = (l: string) => setCefrLevels(prev => prev.includes(l) ? prev.filter(x => x !== l) : [...prev, l]);
+  const toggleDifficulty = (l: string) => setDifficultyLevels(prev => prev.includes(l) ? prev.filter(x => x !== l) : [...prev, l]);
   const updateChar = (i: number, field: keyof CharacterForm, value: string) =>
     setCharacters(prev => prev.map((c, idx) => idx === i ? { ...c, [field]: value } : c));
   const addChar = () => characters.length < 3 && setCharacters(prev => [...prev, { name: '', role: '', persona: '', bias_perception: '', voice_id: 'default', avatar_preset: 'default' }]);
@@ -53,7 +53,7 @@ export default function TopicEditorPage() {
     try {
       await topicsApi.update(topicId!, {
         title, description, domain_knowledge: domainKnowledge,
-        cefr_levels: cefrLevels,
+        difficulty_levels: difficultyLevels,
         tags: tags.split(',').map(t => t.trim()).filter(Boolean),
         characters: characters.map(({ id: _id, ...c }) => c),
       });
@@ -102,12 +102,12 @@ export default function TopicEditorPage() {
               style={{ borderColor: 'var(--color-fog)', backgroundColor: 'var(--color-surface)', color: 'var(--color-ink)' }} />
           </div>
           <div>
-            <label className="meta block mb-3" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>CEFR Levels</label>
+            <label className="meta block mb-3" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>Difficulty</label>
             <div className="flex gap-2 flex-wrap">
-              {CEFR_LEVELS.map(l => (
-                <button key={l} type="button" onClick={() => toggleCefr(l)}
+              {DIFFICULTY_LEVELS.map(l => (
+                <button key={l} type="button" onClick={() => toggleDifficulty(l)}
                   className="meta px-3 py-1.5 border transition-all"
-                  style={{ fontSize: '10px', borderColor: cefrLevels.includes(l) ? 'var(--color-ink)' : 'var(--color-fog)', backgroundColor: cefrLevels.includes(l) ? 'var(--color-ink)' : 'transparent', color: cefrLevels.includes(l) ? 'white' : 'var(--color-ash)' }}>
+                  style={{ fontSize: '10px', borderColor: difficultyLevels.includes(l) ? 'var(--color-ink)' : 'var(--color-fog)', backgroundColor: difficultyLevels.includes(l) ? 'var(--color-ink)' : 'transparent', color: difficultyLevels.includes(l) ? 'white' : 'var(--color-ash)' }}>
                   {l}
                 </button>
               ))}

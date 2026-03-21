@@ -9,7 +9,6 @@ export default function RegisterPage() {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'learner' | 'creator'>('learner');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -18,7 +17,7 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await authApi.register({ email, password, display_name: displayName, role });
+      const res = await authApi.register({ email, password, display_name: displayName });
       const { user, access_token } = res.data;
       setAuth(user, access_token);
       navigate('/topics');
@@ -75,25 +74,6 @@ export default function RegisterPage() {
                 placeholder="At least 6 characters"
                 required
               />
-            </div>
-            <div>
-              <label className="meta block mb-2" style={{ fontSize: '10px', letterSpacing: '0.12em' }}>I am a</label>
-              <div className="flex gap-px" style={{ backgroundColor: 'var(--color-fog)' }}>
-                {(['learner', 'creator'] as const).map(r => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setRole(r)}
-                    className="flex-1 py-2.5 font-body text-[13px] capitalize transition-all"
-                    style={{
-                      backgroundColor: role === r ? 'var(--color-ink)' : 'var(--color-surface)',
-                      color: role === r ? 'white' : 'var(--color-ash)',
-                    }}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
             </div>
             {error && <p className="font-body text-[13px]" style={{ color: '#c44' }}>{error}</p>}
             <button
