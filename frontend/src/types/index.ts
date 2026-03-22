@@ -46,11 +46,27 @@ export interface TranscriptTurn {
   evaluation_snapshot: { tone_score: number; content_score: number; first_voice_score: number };
 }
 
+export interface GrammarCorrection {
+  original: string;
+  corrected: string;
+  explanation: string;
+}
+
+export interface SpeakingEval {
+  fluency_score: number;
+  pronunciation_tips: string[];
+  grammar_corrections: GrammarCorrection[];
+  filler_words: string[];
+  strengths: string[];
+  improvements: string[];
+}
+
 export interface SessionEvaluation {
   composite_score: number;
   tone: { score: number; formality_calibration: number; assertiveness: number; emotional_congruence: number };
   content: { score: number; topical_relevance: number; logical_coherence: number; vocabulary_range: number; grammar_fluency_index: number };
   first_voice: { score: number; speaking_time_ratio: number; turn_initiation_count: number; question_quality: number; interruption_events: number };
+  speaking: SpeakingEval;
   highlight_reel: Array<{ turn_id: string; label: string; coach_note: string }>;
   vocabulary_log: Array<{ word: string; used_correctly: boolean; context: string }>;
   recommended_topic_ids: string[];

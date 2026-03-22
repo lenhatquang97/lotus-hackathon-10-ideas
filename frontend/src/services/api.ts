@@ -46,6 +46,15 @@ export const sessionsApi = {
   evaluation: (id: string) => api.get(`/api/v1/sessions/${id}/evaluation`),
   history: (params?: { skip?: number; limit?: number }) =>
     api.get('/api/v1/sessions/history', { params }),
+  uploadAudio: (sessionId: string, blob: Blob) => {
+    const form = new FormData();
+    form.append('audio', blob, `session-${sessionId}.webm`);
+    return api.post(`/api/v1/sessions/${sessionId}/audio`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  audioUrl: (sessionId: string) =>
+    `${API_BASE}/api/v1/sessions/${sessionId}/audio`,
 };
 
 // Studio (AI generation)

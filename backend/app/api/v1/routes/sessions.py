@@ -1,6 +1,9 @@
 import json
-from fastapi import APIRouter, HTTPException, Depends, WebSocket, WebSocketDisconnect, Query
+from bson import ObjectId
+from fastapi import APIRouter, HTTPException, Depends, WebSocket, WebSocketDisconnect, Query, UploadFile, File
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
+from app.db.mongodb import get_database, get_gridfs_bucket
 from app.models.session import (
     SessionCreate,
     SessionResponse,
@@ -10,6 +13,8 @@ from app.models.session import (
     ToneEval,
     ContentEval,
     FirstVoiceEval,
+    SpeakingEval,
+    GrammarCorrection,
     HighlightItem,
     VocabItem,
 )
@@ -40,11 +45,23 @@ def _format_session(session: dict) -> SessionResponse:
     evaluation = None
     if session.get("evaluation"):
         e = session["evaluation"]
+        speaking_data = e.get("speaking", {})
+        speaking = SpeakingEval(
+            fluency_score=speaking_data.get("fluency_score", 0.0),
+            pronunciation_tips=speaking_data.get("pronunciation_tips", []),
+            grammar_corrections=[
+                GrammarCorrection(**g) for g in speaking_data.get("grammar_corrections", [])
+            ],
+            filler_words=speaking_data.get("filler_words", []),
+            strengths=speaking_data.get("strengths", []),
+            improvements=speaking_data.get("improvements", []),
+        )
         evaluation = SessionEvaluation(
             composite_score=e.get("composite_score", 0.0),
             tone=ToneEval(**e.get("tone", {})),
             content=ContentEval(**e.get("content", {})),
             first_voice=FirstVoiceEval(**e.get("first_voice", {})),
+            speaking=speaking,
             highlight_reel=[HighlightItem(**h) for h in e.get("highlight_reel", [])],
             vocabulary_log=[VocabItem(**v) for v in e.get("vocabulary_log", [])],
             recommended_topic_ids=e.get("recommended_topic_ids", []),
@@ -61,6 +78,7 @@ def _format_session(session: dict) -> SessionResponse:
         duration_seconds=session.get("duration_seconds", 0),
         transcript=transcript,
         evaluation=evaluation,
+        audio_file_id=session.get("audio_file_id"),
     )
 
 
@@ -154,6 +172,48 @@ async def get_evaluation(
             status_code=404, detail="Evaluation not yet available"
         )
     return session["evaluation"]
+
+
+@router.post("/{session_id}/audio")
+async def upload_session_audio(
+    session_id: str,
+    audio: UploadFile = File(...),
+):
+    db = get_database()
+    bucket = get_gridfs_bucket()
+
+    file_id = await bucket.upload_from_stream(
+        f"session-{session_id}.webm",
+        audio.file,
+        metadata={"session_id": session_id, "content_type": audio.content_type or "audio/webm"},
+    )
+
+    await db.sessions.update_one(
+        {"id": session_id},
+        {"$set": {"audio_file_id": str(file_id)}},
+    )
+
+    return {"status": "ok", "audio_file_id": str(file_id)}
+
+
+@router.get("/{session_id}/audio")
+async def get_session_audio(session_id: str):
+    db = get_database()
+    session = await db.sessions.find_one({"id": session_id})
+    if not session or not session.get("audio_file_id"):
+        raise HTTPException(status_code=404, detail="Audio not found")
+
+    bucket = get_gridfs_bucket()
+    grid_out = await bucket.open_download_stream(ObjectId(session["audio_file_id"]))
+
+    async def stream_audio():
+        while True:
+            chunk = await grid_out.read(8192)
+            if not chunk:
+                break
+            yield chunk
+
+    return StreamingResponse(stream_audio(), media_type="audio/webm")
 
 
 @router.websocket("/ws/session/{session_id}")

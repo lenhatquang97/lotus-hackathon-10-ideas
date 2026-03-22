@@ -54,11 +54,27 @@ class VocabItem(BaseModel):
     context: str
 
 
+class GrammarCorrection(BaseModel):
+    original: str
+    corrected: str
+    explanation: str
+
+
+class SpeakingEval(BaseModel):
+    fluency_score: float = 0.0
+    pronunciation_tips: List[str] = []
+    grammar_corrections: List[GrammarCorrection] = []
+    filler_words: List[str] = []
+    strengths: List[str] = []
+    improvements: List[str] = []
+
+
 class SessionEvaluation(BaseModel):
     composite_score: float = 0.0
     tone: ToneEval = ToneEval()
     content: ContentEval = ContentEval()
     first_voice: FirstVoiceEval = FirstVoiceEval()
+    speaking: SpeakingEval = SpeakingEval()
     highlight_reel: List[HighlightItem] = []
     vocabulary_log: List[VocabItem] = []
     recommended_topic_ids: List[str] = []
@@ -79,3 +95,4 @@ class SessionResponse(BaseModel):
     duration_seconds: int = 0
     transcript: List[TranscriptTurn] = []
     evaluation: Optional[SessionEvaluation] = None
+    audio_file_id: Optional[str] = None

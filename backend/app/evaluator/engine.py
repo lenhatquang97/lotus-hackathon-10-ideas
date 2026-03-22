@@ -88,7 +88,15 @@ Evaluate the learner. Respond in JSON:
   "vocabulary_log": [
     {{"word": "example", "used_correctly": true, "context": "sentence context"}}
   ],
-  "coach_narrative": "Two paragraph coaching summary highlighting strengths and areas for improvement."
+  "coach_narrative": "Two paragraph coaching summary highlighting strengths and areas for improvement.",
+  "fluency_score": 0.0-1.0,
+  "grammar_corrections": [
+    {{"original": "what the learner said", "corrected": "the corrected version", "explanation": "brief explanation of the grammar rule"}}
+  ],
+  "pronunciation_tips": ["tip about commonly mispronounced words the learner used"],
+  "filler_words": ["um", "uh", "like"],
+  "speaking_strengths": ["specific thing the learner did well in speaking"],
+  "speaking_improvements": ["specific area for the learner to improve"]
 }}"""
 
         try:
@@ -97,7 +105,7 @@ Evaluate the learner. Respond in JSON:
                 model="gpt-4o",
                 messages=[{"role": "user", "content": prompt}],
                 response_format={"type": "json_object"},
-                max_tokens=1500,
+                max_tokens=2500,
             )
             data = json.loads(response.choices[0].message.content)
         except Exception as e:
@@ -133,6 +141,14 @@ Evaluate the learner. Respond in JSON:
                 "question_quality": data.get("question_quality", 0.5),
                 "interruption_events": 0,
             },
+            "speaking": {
+                "fluency_score": data.get("fluency_score", 0.5),
+                "grammar_corrections": data.get("grammar_corrections", []),
+                "pronunciation_tips": data.get("pronunciation_tips", []),
+                "filler_words": data.get("filler_words", []),
+                "strengths": data.get("speaking_strengths", []),
+                "improvements": data.get("speaking_improvements", []),
+            },
             "highlight_reel": data.get("highlight_reel", []),
             "vocabulary_log": data.get("vocabulary_log", []),
             "recommended_topic_ids": [],
@@ -163,6 +179,14 @@ Evaluate the learner. Respond in JSON:
                 "turn_initiation_count": 0,
                 "question_quality": 0.0,
                 "interruption_events": 0,
+            },
+            "speaking": {
+                "fluency_score": 0.0,
+                "grammar_corrections": [],
+                "pronunciation_tips": [],
+                "filler_words": [],
+                "strengths": [],
+                "improvements": [],
             },
             "highlight_reel": [],
             "vocabulary_log": [],

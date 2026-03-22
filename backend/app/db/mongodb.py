@@ -1,4 +1,4 @@
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase, AsyncIOMotorGridFSBucket
 from app.core.config import settings
 
 client: AsyncIOMotorClient = None
@@ -24,3 +24,7 @@ async def close_mongo_connection():
 
 def get_database() -> AsyncIOMotorDatabase:
     return db
+
+
+def get_gridfs_bucket(bucket_name: str = "session_audio") -> AsyncIOMotorGridFSBucket:
+    return AsyncIOMotorGridFSBucket(db, bucket_name=bucket_name)
