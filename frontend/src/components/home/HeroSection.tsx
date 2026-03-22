@@ -76,18 +76,18 @@ export function HeroSection() {
           <div className="hero-left">
             <div className="headline-block">
               <h1 className="hero-headline">
-                Don't study<br />
-                English.<br />
-                <em>Inhabit it.</em>
+                You studied English for 12 years.<br />
+                <em>You still freeze.</em>
               </h1>
               <p className="hero-body">
-                Practice real scenarios with AI characters who push back.
-                Get live coaching on tone, vocabulary, and confidence.
+                Vietnam's schools taught you grammar. Vocabulary. Test technique.
+                Nobody taught you how to think in English under pressure.
+                Worldwise puts you in the room where that actually gets fixed.
               </p>
             </div>
             <div className="hero-ctas">
-              <Link to="/topics" className="btn-primary">Explore Worlds</Link>
-              <Link to="/studio" className="btn-secondary">Build Your Own</Link>
+              <Link to="/topics" className="btn-primary">Enter a World</Link>
+              <Link to="/topics" className="btn-secondary">Try a scenario free</Link>
             </div>
           </div>
           <div className="hero-right">

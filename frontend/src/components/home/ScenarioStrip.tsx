@@ -75,7 +75,7 @@ export function ScenarioStrip() {
         <div className="strip-header">
           <div className="strip-header-left">
             <span className="section-eyebrow">Worlds</span>
-            <h2 className="strip-title">Real scenarios. Named characters.</h2>
+            <h2 className="strip-title">Real situations. No script. No time to think twice.</h2>
           </div>
           <Link to="/topics" className="strip-see-all">See all 12 worlds &rarr;</Link>
         </div>

@@ -22,10 +22,21 @@ export function Navbar() {
     >
       <Link
         to="/"
-        className="font-display text-[17px] font-light tracking-[0.02em]"
-        style={{ color: 'var(--color-text-primary)', textDecoration: 'none' }}
+        className="flex flex-col leading-tight"
+        style={{ textDecoration: 'none' }}
       >
-        LotusHack
+        <span
+          className="font-display text-[17px] font-light tracking-[0.02em]"
+          style={{ color: 'var(--color-text-primary)' }}
+        >
+          Worldwise
+        </span>
+        <span
+          className="font-body text-[9px] tracking-[0.04em]"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
+          Speak English. For real this time.
+        </span>
       </Link>
       <div className="flex items-center gap-8">
         {user ? (

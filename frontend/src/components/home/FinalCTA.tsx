@@ -11,13 +11,13 @@ export function FinalCTA() {
       <div className="page-container">
         <div className="cta-block">
           <h2 className="cta-headline">
-            <em>Ready to begin?</em>
+            <em>The classroom taught you the words. We'll teach you when to say them.</em>
           </h2>
           <p className="cta-body">
-            Your first session is free. No credit card required.
+            First session free. No credit card. Pick a scenario and walk in.
           </p>
           <div className="cta-actions">
-            <Link to="/auth/register" className="btn-primary">Get Started Free</Link>
+            <Link to="/auth/register" className="btn-primary">Start for Free</Link>
             <Link to="/auth/login" className="btn-secondary">Sign in</Link>
           </div>
         </div>
