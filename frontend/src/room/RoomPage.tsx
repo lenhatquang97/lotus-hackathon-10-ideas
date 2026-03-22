@@ -49,7 +49,9 @@ export function RoomPage({ topicId: topicIdProp }: RoomPageProps) {
     const [showBriefing, setShowBriefing] = useState(false);
     const [showContextIntro, setShowContextIntro] = useState(true);
     const [scenarioContext, setScenarioContext] = useState("");
+    const [topicVocabulary, setTopicVocabulary] = useState<Record<string, string>>({});
     const [sceneLoading, setSceneLoading] = useState(true);
+    const [sceneLoadingVisible, setSceneLoadingVisible] = useState(true);
     const [sceneError, setSceneError] = useState<string | null>(null);
     const [loadingStage, setLoadingStage] = useState("Initializing...");
 
@@ -151,7 +153,9 @@ export function RoomPage({ topicId: topicIdProp }: RoomPageProps) {
     const handleSceneReady = useCallback(
         (room: RoomManager) => {
             roomManagerRef.current = room;
-            setSceneLoading(false);
+            // Fade out loading overlay, then remove it
+            setSceneLoadingVisible(false); // triggers CSS fade-out
+            setTimeout(() => setSceneLoading(false), 600); // remove from DOM after transition
 
             if (isWorldMode) {
                 const store = useRoomStore.getState();
@@ -304,6 +308,15 @@ export function RoomPage({ topicId: topicIdProp }: RoomPageProps) {
                     setScenarioContext(
                         topic.description || topic.domain_knowledge || "",
                     );
+
+                    // Extract vocabulary from topic
+                    if (topic.vocabulary && topic.vocabulary.length > 0) {
+                        const vocabMap: Record<string, string> = {};
+                        for (const v of topic.vocabulary) {
+                            vocabMap[v.word.toLowerCase()] = v.definition;
+                        }
+                        setTopicVocabulary(vocabMap);
+                    }
 
                     const agentList = (topic.characters || []).map(
                         (char: any) => ({
@@ -518,7 +531,7 @@ export function RoomPage({ topicId: topicIdProp }: RoomPageProps) {
 
             {/* Loading overlay for 3D scene */}
             {sceneLoading && (
-                <div className="scene-loading-overlay">
+                <div className={`scene-loading-overlay${!sceneLoadingVisible ? ' fade-out' : ''}`}>
                     <div className="scene-loading-content">
                         <div className="scene-loading-spinner" />
                         <p className="scene-loading-text">{loadingStage}</p>
@@ -579,6 +592,7 @@ export function RoomPage({ topicId: topicIdProp }: RoomPageProps) {
                 transcript={transcript}
                 isOpen={transcriptPanelOpen}
                 onToggle={toggleTranscriptPanel}
+                vocabulary={topicVocabulary}
             />
 
             <ParticipantRail

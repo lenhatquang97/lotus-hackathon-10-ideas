@@ -146,7 +146,15 @@ export class RoomManager {
 
         onProgress?.("Setting up scene...", 90);
 
+        // Wait for scene to settle and first frames to render
         await new Promise((resolve) => setTimeout(resolve, 3500));
+
+        // Wait for two animation frames to guarantee models are painted on screen
+        await new Promise<void>((resolve) => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => resolve());
+            });
+        });
 
         onProgress?.("Ready!", 100);
         this.initialized = true;

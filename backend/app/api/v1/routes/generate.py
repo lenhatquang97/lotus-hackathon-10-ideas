@@ -23,6 +23,12 @@ Output ONLY valid JSON matching this exact structure (no markdown, no code fence
       "persona": "string - 2-3 sentences describing personality traits, communication style, and professional background",
       "bias_perception": "string - what this character tends to believe or advocate for in this scenario"
     }
+  ],
+  "vocabulary": [
+    {
+      "word": "string - a challenging English word relevant to this scenario",
+      "definition": "string - short, clear definition (5-10 words)"
+    }
   ]
 }
 
@@ -33,7 +39,9 @@ Rules:
 - The scenario must create opportunities for the learner to practice initiative, not just respond
 - Character names must be realistic full names (first + last)
 - Each character's persona must include their profession, age range, and communication style
-- Tags should be lowercase single words"""
+- Tags should be lowercase single words
+- Generate 8-15 vocabulary words that are challenging but useful for this scenario
+- Vocabulary words should be domain-specific terms the learner is likely to encounter in this conversation"""
 
 DIFFICULTY_CEFR = {
     "beginner": "A2",
@@ -55,6 +63,11 @@ class GeneratedCharacter(BaseModel):
     bias_perception: str = ""
 
 
+class GeneratedVocabItem(BaseModel):
+    word: str
+    definition: str
+
+
 class GeneratedWorld(BaseModel):
     title: str
     description: str
@@ -62,6 +75,7 @@ class GeneratedWorld(BaseModel):
     difficulty_levels: List[str]
     tags: List[str]
     characters: List[GeneratedCharacter]
+    vocabulary: List[GeneratedVocabItem] = []
 
 
 @router.post("/generate-world", response_model=GeneratedWorld)
@@ -119,6 +133,13 @@ async def generate_world(
         if not characters:
             raise HTTPException(status_code=500, detail="AI did not generate any characters")
 
+        vocabulary = []
+        for v in parsed.get("vocabulary", []):
+            vocabulary.append(GeneratedVocabItem(
+                word=v.get("word", ""),
+                definition=v.get("definition", ""),
+            ))
+
         return GeneratedWorld(
             title=parsed.get("title", "Untitled World"),
             description=parsed.get("description", ""),
@@ -126,6 +147,7 @@ async def generate_world(
             difficulty_levels=parsed.get("difficulty_levels", [data.difficulty.capitalize()]),
             tags=parsed.get("tags", []),
             characters=characters,
+            vocabulary=vocabulary,
         )
 
     except json.JSONDecodeError:

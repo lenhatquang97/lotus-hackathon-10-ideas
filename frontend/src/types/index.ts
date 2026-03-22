@@ -20,6 +20,11 @@ export interface Character {
   avatar_preset: string;
 }
 
+export interface TopicVocabItem {
+  word: string;
+  definition: string;
+}
+
 export interface Topic {
   id: string;
   creator_id: string;
@@ -30,6 +35,7 @@ export interface Topic {
   difficulty_levels: string[];
   tags: string[];
   characters: Character[];
+  vocabulary: TopicVocabItem[];
   play_count: number;
   avg_score: number;
   created_at: string;

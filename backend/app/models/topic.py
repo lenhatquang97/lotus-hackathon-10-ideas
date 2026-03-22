@@ -22,6 +22,11 @@ class CharacterResponse(BaseModel):
     avatar_preset: str
 
 
+class VocabItem(BaseModel):
+    word: str
+    definition: str
+
+
 class TopicCreate(BaseModel):
     title: str
     description: str
@@ -29,6 +34,7 @@ class TopicCreate(BaseModel):
     difficulty_levels: List[str] = []
     tags: List[str] = []
     characters: List[CharacterCreate]
+    vocabulary: List[VocabItem] = []
 
 
 class TopicUpdate(BaseModel):
@@ -38,6 +44,7 @@ class TopicUpdate(BaseModel):
     difficulty_levels: Optional[List[str]] = None
     tags: Optional[List[str]] = None
     characters: Optional[List[CharacterCreate]] = None
+    vocabulary: Optional[List[VocabItem]] = None
 
 
 class TopicResponse(BaseModel):
@@ -50,6 +57,7 @@ class TopicResponse(BaseModel):
     difficulty_levels: List[str]
     tags: List[str]
     characters: List[CharacterResponse]
+    vocabulary: List[VocabItem] = []
     play_count: int
     avg_score: float
     created_at: datetime
